@@ -11,7 +11,7 @@ It was built before the repo existed. Land it as separate small PRs in the order
 | # | Title (also the squash commit title) | Files | State |
 |---|---|---|---|
 | 1 | `chore(repo): scaffold backend and frontend` | `.gitignore`, `CLAUDE.md`, `PLAN.md`, `backend/requirements.txt`, `backend/.env.example`, `backend/app/__init__.py`, `backend/app/config.py`, `backend/app/db.py`, `frontend/` (Vite React-TS scaffold) | done |
-| 2 | `feat(db): store applications, status history and processed emails` | `models.py` | code ready |
+| 2 | `feat(db): store applications, status history and processed emails` | `models.py` | done |
 | 3 | `feat(parser): detect confirmation emails and pull out the company and role` | `parser.py`, `tests/test_parser.py` | code ready |
 | 4 | `feat(mail): read the inbox over IMAP without marking anything read` | `mail.py` | code ready |
 | 5 | `feat(sync): create applications from confirmations, skip duplicates, queue unsure ones` | `sync.py`, `tests/conftest.py`, sync tests | code ready |
