@@ -1,7 +1,10 @@
 from datetime import datetime, timezone
 
+from fastapi.testclient import TestClient
+
 from app.db import SessionLocal
 from app.mail import MailHeader
+from app.main import app
 from app.sync import run_sync
 
 
@@ -40,3 +43,30 @@ def test_resync_is_idempotent():
         run_sync(s, FakeMailbox(ITEMS))
         again = run_sync(s, FakeMailbox(ITEMS))
     assert again.candidates == 0 and again.created == 0
+
+
+def test_review_accept_status_change_and_stats():
+    with SessionLocal() as s:
+        run_sync(s, FakeMailbox(ITEMS))
+    c = TestClient(app)
+
+    review = c.get("/api/emails").json()
+    assert [r["subject"] for r in review] == ["Thank you for applying!"]
+
+    a = c.post(f"/api/emails/{review[0]['id']}/accept", json={"company": "Jobs Co", "role": "Dev"}).json()
+    assert a["source"] == "review"
+
+    p = c.patch(f"/api/applications/{a['id']}", json={"status": "oa"}).json()
+    assert p["status"] == "oa" and [e["status"] for e in p["events"]] == ["applied", "oa"]
+
+    assert c.post("/api/applications", json={"company": "Manual Inc"}).status_code == 201
+    stats = c.get("/api/stats").json()
+    assert stats["total"] == 3 and stats["by_status"]["oa"] == 1
+
+    assert c.delete(f"/api/applications/{a['id']}").status_code == 204
+    assert c.get("/api/meta").json()["review_count"] == 0
+
+
+def test_sync_without_imap_config_is_a_clear_400():
+    r = TestClient(app).post("/api/sync")
+    assert r.status_code == 400 and "IMAP" in r.json()["detail"]

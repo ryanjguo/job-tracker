@@ -2,9 +2,8 @@
 
 ## Status
 
-The backend (issues 1–8) is **written and tested (22 tests passing) but not committed yet**.
-It was built before the repo existed. Land it as separate small PRs in the order below
-(one issue + branch + PR each), so history reads like insync's. Issues 9–11 are not started.
+The backend (issues 1–8) is landed, one PR per issue (22 tests passing). Issues 9–11 are
+not started.
 
 ## Issues
 
@@ -17,7 +16,7 @@ It was built before the repo existed. Land it as separate small PRs in the order
 | 5 | `feat(sync): create applications from confirmations, skip duplicates, queue unsure ones` | `sync.py`, `tests/conftest.py`, sync tests | done |
 | 6 | `feat(cli): add sync, test-imap and seed-demo commands` | `cli.py` | done |
 | 7 | `feat(api): list, add, edit and change status of applications` | `main.py` (applications routes), `schemas.py` | done |
-| 8 | `feat(api): add review queue, sync-now and stats endpoints` | `main.py` (rest), API tests | code ready |
+| 8 | `feat(api): add review queue, sync-now and stats endpoints` | `main.py` (rest), API tests | done |
 | 9 | `feat(web): kanban board with drag to change status` | `frontend/` | to do |
 | 10 | `feat(web): review queue, skipped emails, and add/edit forms` | `frontend/` | to do |
 | 11 | `docs(readme): setup, architecture and design decisions` | `README.md` | to do |

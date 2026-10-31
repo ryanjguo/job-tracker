@@ -1,21 +1,27 @@
 """FastAPI app. Run with:  uvicorn app.main:app --reload  (from backend/)"""
 from __future__ import annotations
 
+import statistics
 from contextlib import asynccontextmanager
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from .config import settings
 from .db import get_session, init_db
 from .models import Application, EmailRecord, Status, StatusEvent, utcnow
-from .schemas import ApplicationCreate, ApplicationOut, ApplicationUpdate
-from .sync import create_application
+from .schemas import (
+    ApplicationCreate, ApplicationOut, ApplicationUpdate, EmailRecordOut, MetaOut, ReviewAccept,
+    StatsOut, WeekCount,
+)
+from .sync import create_application, last_sync_at, sync_from_imap
+
+RESPONDED = {Status.oa.value, Status.interview.value, Status.offer.value, Status.rejected.value}
 
 
 @asynccontextmanager
@@ -47,6 +53,15 @@ def to_out(a: Application) -> ApplicationOut:
         possibly_ghosted=a.status == Status.applied.value and days >= settings.ghost_after_days,
         email_url=email_url(a.email_message_id),
         events=[{"status": e.status, "at": e.at} for e in a.events],
+    )
+
+
+def record_out(r: EmailRecord) -> EmailRecordOut:
+    return EmailRecordOut(
+        id=r.id, sender=r.sender, subject=r.subject, received_at=r.received_at, snippet=r.snippet,
+        guessed_company=r.guessed_company, guessed_role=r.guessed_role, ats=r.ats,
+        outcome=r.outcome, reason=r.reason, application_id=r.application_id,
+        email_url=email_url(r.message_id),
     )
 
 
@@ -109,6 +124,109 @@ def delete_application(app_id: int, session: Session = Depends(get_session)):
             r.outcome = "dismissed"  # so a re-sync doesn't recreate it
     session.delete(a)
     session.commit()
+
+
+# --------------------------------------------------------------------------------------
+# Review queue + skipped emails
+# --------------------------------------------------------------------------------------
+@app.get("/api/emails", response_model=list[EmailRecordOut])
+def list_emails(outcome: str = "review", limit: int = 100, session: Session = Depends(get_session)):
+    rows = session.scalars(
+        select(EmailRecord).where(EmailRecord.outcome == outcome)
+        .order_by(EmailRecord.received_at.desc().nulls_last(), EmailRecord.id.desc()).limit(limit)
+    ).all()
+    return [record_out(r) for r in rows]
+
+
+@app.post("/api/emails/{record_id}/accept", response_model=ApplicationOut)
+def accept_email(record_id: int, body: ReviewAccept, session: Session = Depends(get_session)):
+    """Turn a review-queue (or skipped) email into an application."""
+    r = session.get(EmailRecord, record_id)
+    if not r:
+        raise HTTPException(404, "Email not found")
+    if r.application_id:
+        raise HTTPException(409, "Already linked to an application")
+    from .sync import local_date
+
+    a = create_application(
+        session, company=body.company, role=body.role, applied_date=local_date(r.received_at),
+        source="review", ats=r.ats, job_url=body.job_url, email_message_id=r.message_id,
+    )
+    r.outcome, r.application_id = "accepted", a.id
+    session.commit()
+    return to_out(get_app_or_404(session, a.id))
+
+
+@app.post("/api/emails/{record_id}/dismiss", status_code=204)
+def dismiss_email(record_id: int, session: Session = Depends(get_session)):
+    r = session.get(EmailRecord, record_id)
+    if not r:
+        raise HTTPException(404, "Email not found")
+    r.outcome = "dismissed"
+    session.commit()
+
+
+# --------------------------------------------------------------------------------------
+# Sync, stats, meta
+# --------------------------------------------------------------------------------------
+@app.post("/api/sync")
+def sync_now(session: Session = Depends(get_session)):
+    try:
+        return sync_from_imap(session).as_dict()
+    except RuntimeError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:  # login failures etc.
+        raise HTTPException(502, f"Sync failed: {e}")
+
+
+@app.get("/api/stats", response_model=StatsOut)
+def stats(session: Session = Depends(get_session)):
+    apps = session.scalars(select(Application).options(selectinload(Application.events))).all()
+    today = date.today()
+    by_status = {s.value: 0 for s in Status}
+    for a in apps:
+        by_status[a.status] = by_status.get(a.status, 0) + 1
+
+    counted = [a for a in apps if a.status != Status.withdrawn.value]
+    responded = [a for a in counted if a.status in RESPONDED or any(e.status in RESPONDED for e in a.events)]
+
+    response_days = []
+    for a in responded:
+        first = next((e for e in a.events if e.status in RESPONDED), None)
+        if first:
+            response_days.append(max(0, (first.at.date() - a.applied_date).days))
+
+    monday = today - timedelta(days=today.weekday())
+    weeks = [monday - timedelta(weeks=i) for i in range(11, -1, -1)]
+    per_week = [
+        WeekCount(week_start=w, count=sum(1 for a in apps if w <= a.applied_date < w + timedelta(days=7)))
+        for w in weeks
+    ]
+    return StatsOut(
+        total=len(apps),
+        by_status=by_status,
+        response_rate=round(len(responded) / len(counted), 3) if counted else 0.0,
+        median_days_to_response=statistics.median(response_days) if response_days else None,
+        applied_last_7_days=sum(1 for a in apps if (today - a.applied_date).days < 7),
+        possibly_ghosted=sum(
+            1 for a in apps
+            if a.status == Status.applied.value and (today - a.applied_date).days >= settings.ghost_after_days
+        ),
+        per_week=per_week,
+    )
+
+
+@app.get("/api/meta", response_model=MetaOut)
+def meta(session: Session = Depends(get_session)):
+    review_count = session.scalar(
+        select(func.count()).select_from(EmailRecord).where(EmailRecord.outcome == "review")
+    )
+    return MetaOut(
+        imap_configured=settings.imap_configured, imap_user=settings.imap_user,
+        imap_folder=settings.imap_folder, last_sync_at=last_sync_at(session),
+        ghost_after_days=settings.ghost_after_days, statuses=[s.value for s in Status],
+        review_count=review_count or 0,
+    )
 
 
 # --------------------------------------------------------------------------------------
