@@ -15,7 +15,7 @@ It was built before the repo existed. Land it as separate small PRs in the order
 | 3 | `feat(parser): detect confirmation emails and pull out the company and role` | `parser.py`, `tests/test_parser.py` | done |
 | 4 | `feat(mail): read the inbox over IMAP without marking anything read` | `mail.py` | done |
 | 5 | `feat(sync): create applications from confirmations, skip duplicates, queue unsure ones` | `sync.py`, `tests/conftest.py`, sync tests | done |
-| 6 | `feat(cli): add sync, test-imap and seed-demo commands` | `cli.py` | code ready |
+| 6 | `feat(cli): add sync, test-imap and seed-demo commands` | `cli.py` | done |
 | 7 | `feat(api): list, add, edit and change status of applications` | `main.py` (applications routes), `schemas.py` | code ready |
 | 8 | `feat(api): add review queue, sync-now and stats endpoints` | `main.py` (rest), API tests | code ready |
 | 9 | `feat(web): kanban board with drag to change status` | `frontend/` | to do |
