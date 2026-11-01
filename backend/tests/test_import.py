@@ -14,12 +14,12 @@ SHEET = """\
 ,Internship Application Tracker,,,,,,,,,
 ,TOTAL APPLICATIONS,,UNDER REVIEW,,INTERVIEWS,,OFFERS,,,
 ,5,,3,,1,,0,,,
-,Company,Role / Position,Location,Date Applied,Term / Season,Status,Next Action,Deadline / Follow-up,Job Link / Portal,Notes
-,Acme Robotics,Software Engineering Intern,Vancouver,2026-09-19,Summer 2027,Rejected,,,,"US rejected, Canada pending"
-,Globex ,Software Engineering Intern,"Toronto, Waterloo",2026-09-19,Summer 2027,Interview,Prep system design,2026-11-05,,
-,Initech,Backend Intern,Seattle,2026-09-20,Summer 2027,Online Assessment,,,careers.initech.example,Didn't do the OA
-,Hooli,Data Intern,,Unsure,Summer 2027,Applied,,,,
-,Hooli,"Software Engineering Intern, 6 month","Redmond, WA",2026-09-21,Summer 2027,Applied,,,https://hooli.example/jobs/1,
+,Company,Role / Position,Location,Date Applied,Term / Season,Status,Next Action,Deadline / Follow-up,Job Link / Portal,Notes,Referral
+,Acme Robotics,Software Engineering Intern,Vancouver,2026-09-19,Summer 2027,Rejected,,,,"US rejected, Canada pending",Jane Doe
+,Globex ,Software Engineering Intern,"Toronto, Waterloo",2026-09-19,Summer 2027,Interview,Prep system design,2026-11-05,,,
+,Initech,Backend Intern,Seattle,2026-09-20,Summer 2027,Online Assessment,,ASAP,careers.initech.example,Didn't do the OA,
+,Hooli,Data Intern,,Unsure,Summer 2027,Applied,,,,,
+,Hooli,"Software Engineering Intern, 6 month","Redmond, WA",2026-09-21,Summer 2027,Applied,,,https://hooli.example/jobs/1,,
 ,,,,,,,,,,
 """
 
@@ -38,13 +38,19 @@ def test_reads_table_below_title_block():
     assert parsed[1].applied_date == date(2026, 9, 19)
 
 
-def test_extra_columns_are_kept_in_notes():
+def test_location_term_next_action_and_follow_up_are_fields():
     parsed, _ = rows()
-    assert parsed[0].notes.splitlines() == [
-        "US rejected, Canada pending", "Location: Vancouver", "Term / Season: Summer 2027",
-    ]
-    assert "Next Action: Prep system design" in parsed[1].notes
-    assert "Deadline / Follow-up: 2026-11-05" in parsed[1].notes
+    g = parsed[1]
+    assert (g.location, g.term, g.next_action, g.follow_up_date) == (
+        "Toronto, Waterloo", "Summer 2027", "Prep system design", date(2026, 11, 5))
+    assert g.notes == ""
+
+
+def test_unknown_columns_and_unreadable_follow_up_stay_in_notes():
+    parsed, _ = rows()
+    assert parsed[0].notes.splitlines() == ["US rejected, Canada pending", "Referral: Jane Doe"]
+    assert parsed[2].follow_up_date is None
+    assert parsed[2].notes.splitlines() == ["Didn't do the OA", "Deadline / Follow-up: ASAP"]
 
 
 def test_bare_link_gets_a_scheme():
@@ -78,8 +84,11 @@ def test_headers():
     assert column_field("Role / Position") == "role"
     assert column_field("Date Applied") == "applied_date"
     assert column_field("Job Link / Portal") == "job_url"
-    assert column_field("Deadline / Follow-up") is None
-    assert column_field("Location") is None
+    assert column_field("Deadline / Follow-up") == "follow_up_date"
+    assert column_field("Location") == "location"
+    assert column_field("Term / Season") == "term"
+    assert column_field("Next Action") == "next_action"
+    assert column_field("Referral") is None
 
 
 def test_import_saves_history_and_is_idempotent():
@@ -94,6 +103,7 @@ def test_import_saves_history_and_is_idempotent():
 
         globex = s.query(Application).filter_by(company="Globex").one()
         assert globex.source == "import" and globex.status == "interview"
+        assert globex.location == "Toronto, Waterloo" and globex.follow_up_date == date(2026, 11, 5)
         # no invented date for the interview: only the known "applied" event is logged
         assert [e.status for e in globex.events] == ["applied"]
         assert globex.events[0].at.date() == date(2026, 9, 19)

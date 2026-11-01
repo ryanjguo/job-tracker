@@ -70,3 +70,16 @@ def test_review_accept_status_change_and_stats():
 def test_sync_without_imap_config_is_a_clear_400():
     r = TestClient(app).post("/api/sync")
     assert r.status_code == 400 and "IMAP" in r.json()["detail"]
+
+
+def test_location_term_next_action_and_follow_up_via_api():
+    c = TestClient(app)
+    a = c.post("/api/applications", json={
+        "company": "Acme", "location": "Vancouver", "term": "Summer 2027",
+        "next_action": "Follow up with recruiter", "follow_up_date": "2026-11-05",
+    }).json()
+    assert (a["location"], a["term"], a["next_action"], a["follow_up_date"]) == (
+        "Vancouver", "Summer 2027", "Follow up with recruiter", "2026-11-05")
+
+    p = c.patch(f"/api/applications/{a['id']}", json={"location": "Remote", "follow_up_date": None}).json()
+    assert p["location"] == "Remote" and p["follow_up_date"] is None and p["term"] == "Summer 2027"

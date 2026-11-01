@@ -26,6 +26,10 @@ export function ApplicationModal({ app, onSave, onDelete, onClose }: Props) {
     job_url: app?.job_url ?? '',
     notes: app?.notes ?? '',
     status: app?.status ?? 'applied',
+    location: app?.location ?? '',
+    term: app?.term ?? '',
+    next_action: app?.next_action ?? '',
+    follow_up_date: app?.follow_up_date ?? null,
   }))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -84,6 +88,19 @@ export function ApplicationModal({ app, onSave, onDelete, onClose }: Props) {
             <input value={form.role} onChange={(e) => set('role', e.target.value)} maxLength={300} />
           </label>
           <label>
+            Location
+            <input value={form.location} onChange={(e) => set('location', e.target.value)} maxLength={200} />
+          </label>
+          <label>
+            Term
+            <input
+              value={form.term}
+              onChange={(e) => set('term', e.target.value)}
+              maxLength={60}
+              placeholder="e.g. Summer 2027"
+            />
+          </label>
+          <label>
             Applied
             <input
               type="date"
@@ -99,6 +116,23 @@ export function ApplicationModal({ app, onSave, onDelete, onClose }: Props) {
                 <option key={s} value={s}>{STATUS_LABEL[s]}</option>
               ))}
             </select>
+          </label>
+          <label>
+            Next action
+            <input
+              value={form.next_action}
+              onChange={(e) => set('next_action', e.target.value)}
+              maxLength={300}
+              placeholder="e.g. Email the recruiter"
+            />
+          </label>
+          <label>
+            Follow up by
+            <input
+              type="date"
+              value={form.follow_up_date ?? ''}
+              onChange={(e) => set('follow_up_date', e.target.value || null)}
+            />
           </label>
           <label className="span-2">
             Job posting URL

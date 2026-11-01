@@ -27,6 +27,10 @@ export interface Application {
   applied_date: string // YYYY-MM-DD
   job_url: string
   notes: string
+  location: string
+  term: string // e.g. "Summer 2027"
+  next_action: string
+  follow_up_date: string | null // YYYY-MM-DD
   source: 'email' | 'review' | 'manual' | 'import'
   ats: string
   created_at: string
@@ -44,6 +48,15 @@ export interface ApplicationInput {
   job_url: string
   notes: string
   status: Status
+  location: string
+  term: string
+  next_action: string
+  follow_up_date: string | null
+}
+
+/** A follow-up date that is today or past, on an application that is still in play. */
+export function followUpDue(a: Pick<Application, 'follow_up_date' | 'status'>, today: string): boolean {
+  return !!a.follow_up_date && a.follow_up_date <= today && !['rejected', 'withdrawn', 'ghosted'].includes(a.status)
 }
 
 export interface Stats {

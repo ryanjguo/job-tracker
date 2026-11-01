@@ -19,7 +19,10 @@ from .models import Application, Status, utcnow
 from .parser import normalize_company, normalize_role
 from .sync import create_application
 
-FIELDS = ("company", "role", "applied_date", "status", "job_url", "notes")
+FIELDS = ("company", "role", "applied_date", "status", "job_url", "notes",
+          "location", "term", "next_action", "follow_up_date")
+# optional fields added after v1; also the note-line prefixes moved by backfill_fields_from_notes
+EXTRA_FIELDS = ("location", "term", "next_action", "follow_up_date")
 
 # Spreadsheet status words -> app statuses (matched on the lowercased cell)
 STATUS_WORDS: list[tuple[re.Pattern, Status]] = [
@@ -44,6 +47,10 @@ class ImportRow:
     status: str
     job_url: str
     notes: str
+    location: str = ""
+    term: str = ""
+    next_action: str = ""
+    follow_up_date: date | None = None
 
 
 @dataclass
@@ -63,6 +70,14 @@ def column_field(header: str) -> str | None:
         return None
     if "company" in h or h in {"employer", "organization", "organisation"}:
         return "company"
+    if "location" in h or h in {"city", "office", "where"}:
+        return "location"
+    if "term" in h or "season" in h or h in {"cycle", "intake"}:
+        return "term"
+    if "next" in h and ("action" in h or "step" in h):
+        return "next_action"
+    if "follow" in h or "deadline" in h or h in {"due", "due date", "remind", "reminder"}:
+        return "follow_up_date"
     if "role" in h or "position" in h or "title" in h:
         return "role"
     if ("appl" in h and ("date" in h or h == "applied")) or h in {"date", "applied on", "submitted"}:
@@ -144,6 +159,13 @@ def read_rows(lines: list[list[str]], today: date) -> tuple[list[ImportRow], lis
             notes.append(f"Status in spreadsheet: {raw_status}")
             warnings.append(f"line {offset}: {company}: status {raw_status!r} not understood, using applied")
 
+        follow_up = None
+        raw_follow = values.get("follow_up_date", "")
+        if raw_follow:
+            follow_up = parse_date(raw_follow)
+            if follow_up is None:  # e.g. "ASAP": keep the words
+                notes.append(f"{headers[_col(mapping, 'follow_up_date')]}: {raw_follow}")
+
         for i, h in enumerate(headers):
             if mapping[i] is None and h and cells[i]:
                 notes.append(f"{h}: {cells[i]}")
@@ -152,8 +174,14 @@ def read_rows(lines: list[list[str]], today: date) -> tuple[list[ImportRow], lis
             line=offset, company=company, role=values.get("role", ""), applied_date=applied,
             status=status.value, job_url=clean_url(values.get("job_url", "")),
             notes="\n".join(n for n in notes if n),
+            location=values.get("location", ""), term=values.get("term", ""),
+            next_action=values.get("next_action", ""), follow_up_date=follow_up,
         ))
     return rows, warnings
+
+
+def _col(mapping: dict[int, str | None], name: str) -> int:
+    return next(i for i, f in mapping.items() if f == name)
 
 
 def read_csv(path: str | Path, today: date | None = None) -> tuple[list[ImportRow], list[str]]:
@@ -185,7 +213,8 @@ def import_rows(session: Session, rows: list[ImportRow], dry_run: bool = False) 
             continue
         app = create_application(
             session, company=row.company, role=row.role, applied_date=row.applied_date,
-            source="import", job_url=row.job_url, notes=row.notes,
+            source="import", job_url=row.job_url, notes=row.notes, location=row.location,
+            term=row.term, next_action=row.next_action, follow_up_date=row.follow_up_date,
         )
         # History starts with "applied" on the applied date. The sheet doesn't say when the status
         # last changed, so no event is logged for it: an invented date would skew "days to response".
@@ -195,3 +224,40 @@ def import_rows(session: Session, rows: list[ImportRow], dry_run: bool = False) 
     if not dry_run:
         session.commit()
     return summary
+
+
+# --------------------------------------------------------------------------------------
+# One-time upgrade for databases imported before these fields existed
+# --------------------------------------------------------------------------------------
+_NOTE_LINE = re.compile(r"^(?P<label>[^:\n]{2,40}):\s*(?P<value>.+)$")
+
+
+def move_note_lines(app: Application) -> bool:
+    """Move "Location: Vancouver"-style note lines (written by older imports) into the matching
+    empty field. Returns True if anything changed."""
+    kept, changed = [], False
+    for line in (app.notes or "").splitlines():
+        m = _NOTE_LINE.match(line.strip())
+        name = column_field(m.group("label")) if m else None
+        if name in EXTRA_FIELDS and not getattr(app, name):
+            value = m.group("value").strip()
+            if name == "follow_up_date":
+                parsed = parse_date(value)
+                if parsed is None:
+                    kept.append(line)
+                    continue
+                value = parsed
+            setattr(app, name, value)
+            changed = True
+        else:
+            kept.append(line)
+    if changed:
+        app.notes = "\n".join(kept)
+    return changed
+
+
+def backfill_fields_from_notes(bind) -> int:
+    with Session(bind=bind) as s:
+        n = sum(move_note_lines(a) for a in s.scalars(select(Application).where(Application.notes != "")))
+        s.commit()
+    return n
