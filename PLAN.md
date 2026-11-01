@@ -13,7 +13,7 @@ It was built before the repo existed. Land it as separate small PRs in the order
 | 1 | `chore(repo): scaffold backend and frontend` | `.gitignore`, `CLAUDE.md`, `PLAN.md`, `backend/requirements.txt`, `backend/.env.example`, `backend/app/__init__.py`, `backend/app/config.py`, `backend/app/db.py`, `frontend/` (Vite React-TS scaffold) | done |
 | 2 | `feat(db): store applications, status history and processed emails` | `models.py` | done |
 | 3 | `feat(parser): detect confirmation emails and pull out the company and role` | `parser.py`, `tests/test_parser.py` | done |
-| 4 | `feat(mail): read the inbox over IMAP without marking anything read` | `mail.py` | code ready |
+| 4 | `feat(mail): read the inbox over IMAP without marking anything read` | `mail.py` | done |
 | 5 | `feat(sync): create applications from confirmations, skip duplicates, queue unsure ones` | `sync.py`, `tests/conftest.py`, sync tests | code ready |
 | 6 | `feat(cli): add sync, test-imap and seed-demo commands` | `cli.py` | code ready |
 | 7 | `feat(api): list, add, edit and change status of applications` | `main.py` (applications routes), `schemas.py` | code ready |
