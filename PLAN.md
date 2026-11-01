@@ -20,6 +20,7 @@ are landed; 11 (README) is not started.
 | 9 | `feat(web): kanban board with drag to change status` | `frontend/` | done |
 | 10 | `feat(web): review queue, skipped emails, and add/edit forms` | `frontend/` | done |
 | 11 | `docs(readme): setup, architecture and design decisions` | `README.md` | to do |
+| 22 | `feat(cli): import applications from a spreadsheet CSV` | `importer.py`, `cli.py`, `tests/test_import.py` | done |
 
 Note for 7/8: `main.py` and `schemas.py` hold both; split by route group, or land both in 7 and
 keep 8 for the remaining endpoints + tests. Each PR must pass tests on its own.

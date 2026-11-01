@@ -31,7 +31,7 @@ class Application(Base):
     applied_date: Mapped[date] = mapped_column(Date)
     job_url: Mapped[str] = mapped_column(String(1000), default="")
     notes: Mapped[str] = mapped_column(Text, default="")
-    # "email" (created by sync), "review" (accepted from review queue), "manual"
+    # "email" (created by sync), "review" (accepted from review queue), "manual", "import" (CSV)
     source: Mapped[str] = mapped_column(String(20), default="manual")
     ats: Mapped[str] = mapped_column(String(40), default="")  # greenhouse, lever, ...
     email_message_id: Mapped[str] = mapped_column(String(500), default="")

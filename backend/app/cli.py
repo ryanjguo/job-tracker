@@ -3,6 +3,7 @@
     python -m app.cli sync          # pull new confirmation emails (use this from cron)
     python -m app.cli test-imap     # check your IMAP login works
     python -m app.cli seed-demo     # fill the database with fake data to try the UI
+    python -m app.cli import-csv tracker.csv [--dry-run]   # seed from a spreadsheet
 """
 import argparse
 import random
@@ -93,12 +94,40 @@ def cmd_seed_demo(_args) -> int:
     return 0
 
 
+def cmd_import_csv(args) -> int:
+    from .importer import import_rows, read_csv
+
+    try:
+        rows, warnings = read_csv(args.file)
+    except (OSError, ValueError) as e:
+        print(f"Could not read {args.file}: {e}", file=sys.stderr)
+        return 1
+    init_db()
+    with SessionLocal() as s:
+        summary = import_rows(s, rows, dry_run=args.dry_run)
+    for row in summary.created:
+        print(f"  {'would add' if args.dry_run else 'added'}  {row.applied_date}  {row.status:<10} "
+              f"{row.company} | {row.role}")
+    for row in summary.skipped_existing:
+        print(f"  skipped    {row.applied_date}  {row.company} | {row.role}  (already in the tracker)")
+    for w in warnings:
+        print("  note:", w)
+    verb = "Would add" if args.dry_run else "Added"
+    print(f"{verb} {len(summary.created)} applications, skipped {len(summary.skipped_existing)} "
+          f"already in the tracker." + (" Nothing was saved (--dry-run)." if args.dry_run else ""))
+    return 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="python -m app.cli")
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("sync", help="pull new confirmation emails").set_defaults(fn=cmd_sync)
     sub.add_parser("test-imap", help="check IMAP credentials").set_defaults(fn=cmd_test_imap)
     sub.add_parser("seed-demo", help="add fake data to try the UI").set_defaults(fn=cmd_seed_demo)
+    imp = sub.add_parser("import-csv", help="add applications from a spreadsheet saved as CSV")
+    imp.add_argument("file", help="path to the .csv file")
+    imp.add_argument("--dry-run", action="store_true", help="show what would be added, save nothing")
+    imp.set_defaults(fn=cmd_import_csv)
     args = parser.parse_args(argv)
     return args.fn(args)
 
