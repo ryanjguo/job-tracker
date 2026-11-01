@@ -2,8 +2,8 @@
 
 ## Status
 
-The backend (issues 1–8) is landed, one PR per issue (22 tests passing). Issue 9 (board + table views)
-is landed; 10–11 are not started.
+The backend (issues 1–8) is landed, one PR per issue (22 tests passing). Issues 9–10 (the dashboard)
+are landed; 11 (README) is not started.
 
 ## Issues
 
@@ -18,7 +18,7 @@ is landed; 10–11 are not started.
 | 7 | `feat(api): list, add, edit and change status of applications` | `main.py` (applications routes), `schemas.py` | done |
 | 8 | `feat(api): add review queue, sync-now and stats endpoints` | `main.py` (rest), API tests | done |
 | 9 | `feat(web): kanban board with drag to change status` | `frontend/` | done |
-| 10 | `feat(web): review queue, skipped emails, and add/edit forms` | `frontend/` | to do |
+| 10 | `feat(web): review queue, skipped emails, and add/edit forms` | `frontend/` | done |
 | 11 | `docs(readme): setup, architecture and design decisions` | `README.md` | to do |
 
 Note for 7/8: `main.py` and `schemas.py` hold both; split by route group, or land both in 7 and

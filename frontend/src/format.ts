@@ -29,3 +29,15 @@ export function timeAgo(iso: string, now: Date = new Date()): string {
 export function percent(rate: number): string {
   return `${Math.round(rate * 100)}%`
 }
+
+/** Today as YYYY-MM-DD in local time (for <input type="date">). */
+export function todayISO(): string {
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+/** ISO timestamp -> "Oct 3, 14:05" in local time. */
+export function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+}

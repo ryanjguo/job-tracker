@@ -66,6 +66,21 @@ export interface Meta {
   review_count: number
 }
 
+export interface EmailRecord {
+  id: number
+  sender: string
+  subject: string
+  received_at: string | null
+  snippet: string
+  guessed_company: string
+  guessed_role: string
+  ats: string
+  outcome: 'created' | 'duplicate' | 'review' | 'accepted' | 'dismissed' | 'ignored'
+  reason: string
+  application_id: number | null
+  email_url: string | null
+}
+
 export interface SyncSummary {
   scanned: number
   candidates: number
@@ -109,8 +124,15 @@ const json = (method: string, body?: unknown): RequestInit => ({
 
 export const api = {
   applications: () => request<Application[]>('/api/applications'),
+  createApplication: (body: Partial<ApplicationInput> & { company: string }) =>
+    request<Application>('/api/applications', json('POST', body)),
   updateApplication: (id: number, patch: Partial<ApplicationInput>) =>
     request<Application>(`/api/applications/${id}`, json('PATCH', patch)),
+  deleteApplication: (id: number) => request<void>(`/api/applications/${id}`, json('DELETE')),
+  emails: (outcome: 'review' | 'ignored') => request<EmailRecord[]>(`/api/emails?outcome=${outcome}`),
+  acceptEmail: (id: number, body: { company: string; role: string; job_url?: string }) =>
+    request<Application>(`/api/emails/${id}/accept`, json('POST', body)),
+  dismissEmail: (id: number) => request<void>(`/api/emails/${id}/dismiss`, json('POST')),
   stats: () => request<Stats>('/api/stats'),
   meta: () => request<Meta>('/api/meta'),
   sync: () => request<SyncSummary>('/api/sync', json('POST')),
