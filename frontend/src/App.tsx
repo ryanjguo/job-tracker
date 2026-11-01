@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
-import { api, errorMessage, type Application, type Meta, type Stats, type Status } from './api'
+import { api, errorMessage, type Application, type ApplicationInput, type Meta, type Stats, type Status } from './api'
+import { ApplicationModal } from './components/ApplicationModal'
 import { Board } from './components/Board'
 import { Header } from './components/Header'
+import { ReviewQueue } from './components/ReviewQueue'
 import { StatsStrip } from './components/StatsStrip'
 import { TableView } from './components/TableView'
 import './App.css'
 
-type View = 'board' | 'table'
+type View = 'board' | 'table' | 'review'
 type Notice = { kind: 'ok' | 'error'; text: string } | null
 
 function App() {
@@ -17,6 +19,9 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [notice, setNotice] = useState<Notice>(null)
+  // null = closed, 'new' = add form, otherwise the application being edited
+  const [editing, setEditing] = useState<Application | 'new' | null>(null)
+  const [syncCount, setSyncCount] = useState(0) // remounts the review list after a sync
 
   const load = useCallback(
     () =>
@@ -35,6 +40,7 @@ function App() {
     load().finally(() => setLoading(false))
   }, [load])
 
+  const showError = useCallback((text: string) => setNotice({ kind: 'error', text }), [])
 
   const changeStatus = async (id: number, status: Status) => {
     const before = apps
@@ -58,6 +64,7 @@ function App() {
       const parts = [`${s.created} new`, `${s.duplicates} duplicates`, `${s.review} to review`, `${s.ignored} skipped`]
       const errors = s.errors.length ? ` · ${s.errors.length} errors` : ''
       setNotice({ kind: 'ok', text: `Scanned ${s.scanned} emails since ${s.since}: ${parts.join(', ')}${errors}.` })
+      setSyncCount((n) => n + 1)
       await load()
     } catch (e) {
       setNotice({ kind: 'error', text: `Sync failed: ${errorMessage(e)}` })
@@ -66,9 +73,34 @@ function App() {
     }
   }
 
+  const save = async (input: ApplicationInput) => {
+    if (editing === 'new') {
+      const created = await api.createApplication(input)
+      setNotice({ kind: 'ok', text: `Added ${created.company}.` })
+    } else if (editing) {
+      await api.updateApplication(editing.id, input)
+    }
+    setEditing(null)
+    await load()
+  }
+
+  const remove = async () => {
+    if (!editing || editing === 'new') return
+    await api.deleteApplication(editing.id)
+    setNotice({ kind: 'ok', text: `Deleted ${editing.company}.` })
+    setEditing(null)
+    await load()
+  }
+
+  const reviewCount = meta?.review_count ?? 0
+
   return (
     <div className="page">
-      <Header meta={meta} syncing={syncing} onSync={syncNow} />
+      <Header meta={meta} syncing={syncing} onSync={syncNow}>
+        <button type="button" className="primary" onClick={() => setEditing('new')}>
+          + Add
+        </button>
+      </Header>
 
       {notice && (
         <div className={`notice notice--${notice.kind}`} role={notice.kind === 'error' ? 'alert' : 'status'}>
@@ -88,17 +120,35 @@ function App() {
         <button type="button" className={view === 'table' ? 'tab tab--active' : 'tab'} onClick={() => setView('table')}>
           Table
         </button>
+        <button type="button" className={view === 'review' ? 'tab tab--active' : 'tab'} onClick={() => setView('review')}>
+          Review{' '}
+          <span className={reviewCount ? 'count count--alert' : 'count'} aria-label={`${reviewCount} to review`}>
+            {reviewCount}
+          </span>
+        </button>
       </nav>
 
       <main>
         {loading ? (
           <p className="muted">Loading…</p>
         ) : view === 'board' ? (
-          <Board apps={apps} onStatus={changeStatus} />
+          <Board apps={apps} onStatus={changeStatus} onOpen={setEditing} />
+        ) : view === 'table' ? (
+          <TableView apps={apps} onStatus={changeStatus} onOpen={setEditing} />
         ) : (
-          <TableView apps={apps} onStatus={changeStatus} />
+          <ReviewQueue key={syncCount} onChanged={load} onError={showError} />
         )}
       </main>
+
+      {editing && (
+        <ApplicationModal
+          key={editing === 'new' ? 'new' : editing.id}
+          app={editing === 'new' ? null : editing}
+          onSave={save}
+          onDelete={editing === 'new' ? undefined : remove}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </div>
   )
 }

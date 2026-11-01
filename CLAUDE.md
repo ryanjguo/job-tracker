@@ -33,8 +33,9 @@ frontend/
   src/
     api.ts      typed fetch wrappers + types mirroring backend/app/schemas.py
     format.ts   date / "N days ago" helpers
-    App.tsx     state, tabs, optimistic status changes, sync button
-    components/ Header, StatsStrip, Board + AppCard (drag to change status), TableView
+    App.tsx     state, tabs, optimistic status changes, sync button, add/edit modal
+    components/ Header, StatsStrip, Board + AppCard (drag to change status), TableView,
+                ReviewQueue + EmailItem (review queue, skipped emails), ApplicationModal
 ```
 
 ## Commands

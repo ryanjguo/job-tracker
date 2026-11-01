@@ -341,3 +341,150 @@ td.links a + a {
   text-align: center;
   padding: 24px;
 }
+
+/* ---------- review queue ---------- */
+.section-title {
+  margin: 4px 0;
+  font-size: 1.05rem;
+}
+
+.email-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.email {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  max-width: 900px;
+}
+
+.email__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.email__sender {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.email__snippet {
+  margin: 6px 0;
+  font-size: 0.875rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.email__reason {
+  font-size: 0.8rem;
+}
+
+.email__form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  margin-top: 8px;
+}
+
+.email__form label,
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.email__form input {
+  min-width: 200px;
+}
+
+.email__actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.email__form .email__actions {
+  margin-top: 0;
+}
+
+.skipped {
+  margin-top: 28px;
+}
+
+.skipped summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.skipped summary .muted {
+  font-weight: 400;
+}
+
+/* ---------- modal ---------- */
+.modal {
+  width: min(560px, calc(100vw - 32px));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: inherit;
+  padding: 20px;
+}
+
+.modal::backdrop {
+  background: rgb(15 23 42 / 0.45);
+}
+
+.modal h2 {
+  margin: 0 0 14px;
+  font-size: 1.15rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-grid input,
+.form-grid select,
+.form-grid textarea {
+  color: var(--text);
+}
+
+.form-grid .span-2 {
+  grid-column: span 2;
+}
+
+.history {
+  margin-top: 12px;
+  font-size: 0.8rem;
+}
+
+.form-error {
+  color: var(--danger);
+  font-size: 0.875rem;
+}
+
+.modal__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.spacer {
+  flex: 1;
+}
