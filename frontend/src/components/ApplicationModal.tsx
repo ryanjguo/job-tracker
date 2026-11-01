@@ -2,6 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { STATUSES, STATUS_LABEL, type Application, type ApplicationInput, type Status } from '../api'
 import { formatDateTime, todayISO } from '../format'
 
+const SOURCE_LABEL: Record<Application['source'], string> = {
+  email: 'email',
+  review: 'review queue',
+  manual: 'manual entry',
+  import: 'spreadsheet import',
+}
+
 interface Props {
   /** null = add a new application */
   app: Application | null
@@ -118,7 +125,7 @@ export function ApplicationModal({ app, onSave, onDelete, onClose }: Props) {
                 {STATUS_LABEL[ev.status]} <span title={ev.at}>({formatDateTime(ev.at)})</span>
               </span>
             ))}
-            {app.source !== 'manual' && <> · added from {app.source === 'email' ? 'email' : 'review queue'}</>}
+            {app.source !== 'manual' && <> · added from {SOURCE_LABEL[app.source]}</>}
           </div>
         )}
 
@@ -131,7 +138,7 @@ export function ApplicationModal({ app, onSave, onDelete, onClose }: Props) {
               className="danger"
               disabled={busy}
               onClick={() => {
-                const note = app.source === 'manual' ? '' : " Its emails won't be re-imported on the next sync."
+                const note = app.source === 'email' || app.source === 'review' ? " Its emails won't be re-imported on the next sync." : ''
                 if (window.confirm(`Delete ${app.company}?${note}`)) void run(onDelete)
               }}
             >

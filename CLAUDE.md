@@ -27,7 +27,8 @@ backend/
     mail.py     IMAP source: headers first, bodies only for prefilter candidates, BODY.PEEK
     sync.py     mailbox -> prefilter -> classify -> dedupe -> DB; per-email commits
     main.py     FastAPI routes under /api; serves frontend/dist at / if built
-    cli.py      python -m app.cli sync | test-imap | seed-demo
+    importer.py CSV import: finds the header row, maps columns, extra columns go to notes
+    cli.py      python -m app.cli sync | test-imap | seed-demo | import-csv
   tests/        pytest; FakeMailbox in test_sync_api.py, realistic samples in test_parser.py
 frontend/
   src/
@@ -45,6 +46,7 @@ cd backend
 pip install -r requirements.txt
 python -m pytest -q                  # all tests
 python -m app.cli seed-demo          # fake data to try the UI
+python -m app.cli import-csv FILE.csv --dry-run   # preview, then drop --dry-run to import
 uvicorn app.main:app --reload        # API on :8000
 python -m app.cli sync               # one sync run (cron calls this)
 
@@ -66,7 +68,8 @@ npm run lint
 - **Body:** 1–3 sentences on *how*, then `Closes #N`.
 - First commit `chore: initial commit`, then `chore(repo): scaffold ...`.
 - Tests pass before every merge. A new parser case gets a test in `tests/test_parser.py`.
-- Never commit `.env`, `*.db`, or real email content (sanitize samples: fake names/companies).
+- Never commit `.env`, `*.db`, real email content or the user's own spreadsheet (sanitize samples:
+  fake names/companies).
 
 ## Design decisions (don't undo without asking)
 

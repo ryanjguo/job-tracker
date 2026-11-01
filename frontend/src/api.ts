@@ -27,7 +27,7 @@ export interface Application {
   applied_date: string // YYYY-MM-DD
   job_url: string
   notes: string
-  source: 'email' | 'review' | 'manual'
+  source: 'email' | 'review' | 'manual' | 'import'
   ats: string
   created_at: string
   status_changed_at: string
