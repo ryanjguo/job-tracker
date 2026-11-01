@@ -16,6 +16,8 @@
   --danger-bg: #fee2e2;
   --ok-bg: #dcfce7;
   --ghost-bg: #fefce8;
+  --due: #b45309;
+  --due-bg: #ffedd5;
 
   background: var(--bg);
   color: var(--text);
@@ -36,6 +38,8 @@
     --danger-bg: #450a0a;
     --ok-bg: #052e16;
     --ghost-bg: #2a2410;
+    --due: #fdba74;
+    --due-bg: #3b1d0a;
   }
 }
 

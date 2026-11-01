@@ -21,8 +21,9 @@ See `PLAN.md` for the issue list, what's done, and what's next.
 backend/
   app/
     config.py   settings from env / backend/.env
-    db.py       engine, session, init_db (create_all; no migrations yet)
-    models.py   Application, StatusEvent (history), EmailRecord (every email looked at), Meta
+    db.py       engine, session, init_db (create_all + add_missing_columns; no Alembic yet)
+    models.py   Application (+ location, term, next_action, follow_up_date), StatusEvent (history),
+                EmailRecord (every email looked at), Meta
     parser.py   classify(email) -> confirmation | review | ignore, + company/role extraction
     mail.py     IMAP source: headers first, bodies only for prefilter candidates, BODY.PEEK
     sync.py     mailbox -> prefilter -> classify -> dedupe -> DB; per-email commits
@@ -84,5 +85,8 @@ npm run lint
   `DUPLICATE_WINDOW_DAYS` → linked as duplicate; fills in a missing role.
 - **Deleting an application** marks its emails `dismissed` so a re-sync doesn't recreate it.
 - **"Possibly ghosted"** is a computed flag (applied ≥ `GHOST_AFTER_DAYS`), never auto-applied.
+- **Schema changes without a reset:** `init_db` adds columns the models have but the database
+  lacks, so a new column must be nullable or have a `server_default`. Renames/type changes still
+  need a real migration.
 - **Work laptop:** the user applies from a managed work laptop too. Email-based creation works
   regardless of device; no extension or software should be required on that machine.

@@ -66,11 +66,14 @@ def local_date(dt: datetime | None) -> date:
 
 def create_application(session: Session, *, company: str, role: str = "", applied_date: date,
                        source: str, ats: str = "", job_url: str = "", notes: str = "",
-                       email_message_id: str = "", status: str = Status.applied.value) -> Application:
+                       email_message_id: str = "", status: str = Status.applied.value,
+                       location: str = "", term: str = "", next_action: str = "",
+                       follow_up_date: date | None = None) -> Application:
     app = Application(
         company=company.strip(), role=role.strip(), applied_date=applied_date, source=source,
         ats=ats, job_url=job_url.strip(), notes=notes, email_message_id=email_message_id,
-        status=status,
+        status=status, location=location.strip(), term=term.strip(),
+        next_action=next_action.strip(), follow_up_date=follow_up_date,
     )
     app.events.append(StatusEvent(status=status))
     session.add(app)

@@ -31,6 +31,11 @@ class Application(Base):
     applied_date: Mapped[date] = mapped_column(Date)
     job_url: Mapped[str] = mapped_column(String(1000), default="")
     notes: Mapped[str] = mapped_column(Text, default="")
+    # Added after v1: server defaults let init_db add them to an existing database (see db.py)
+    location: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    term: Mapped[str] = mapped_column(String(60), default="", server_default="")  # e.g. "Summer 2027"
+    next_action: Mapped[str] = mapped_column(String(300), default="", server_default="")
+    follow_up_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     # "email" (created by sync), "review" (accepted from review queue), "manual", "import" (CSV)
     source: Mapped[str] = mapped_column(String(20), default="manual")
     ats: Mapped[str] = mapped_column(String(40), default="")  # greenhouse, lever, ...

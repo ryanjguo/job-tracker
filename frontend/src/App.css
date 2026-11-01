@@ -269,6 +269,24 @@ textarea {
   margin-top: 2px;
 }
 
+.card__place {
+  font-size: 0.8rem;
+}
+
+.card__next {
+  margin-top: 6px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--chip);
+  font-size: 0.78rem;
+}
+
+.card__next--due {
+  background: var(--due-bg);
+  color: var(--due);
+  font-weight: 600;
+}
+
 .card__meta {
   margin-top: 4px;
   font-size: 0.8rem;
@@ -330,6 +348,15 @@ td {
 
 td.links a + a {
   margin-left: 10px;
+}
+
+td.nowrap {
+  white-space: nowrap;
+}
+
+td.due {
+  color: var(--due);
+  font-weight: 600;
 }
 
 .row--ghost td {

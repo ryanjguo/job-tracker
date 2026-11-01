@@ -1,5 +1,5 @@
-import type { Application, Status } from '../api'
-import { daysAgo, formatDate } from '../format'
+import { followUpDue, type Application, type Status } from '../api'
+import { daysAgo, formatDate, todayISO } from '../format'
 
 interface Props {
   app: Application
@@ -8,6 +8,8 @@ interface Props {
 }
 
 export function AppCard({ app, onStatus, onOpen }: Props) {
+  const place = [app.location, app.term].filter(Boolean).join(' · ')
+  const due = followUpDue(app, todayISO())
   return (
     <article
       className={`card${app.possibly_ghosted ? ' card--ghost' : ''}${onOpen ? ' card--clickable' : ''}`}
@@ -24,9 +26,16 @@ export function AppCard({ app, onStatus, onOpen }: Props) {
         {app.ats && <span className="badge">{app.ats}</span>}
       </div>
       {app.role && <div className="card__role">{app.role}</div>}
+      {place && <div className="card__place muted">{place}</div>}
       <div className="card__meta muted" title={app.applied_date}>
         {formatDate(app.applied_date)} · {daysAgo(app.days_since_applied)}
       </div>
+      {(app.next_action || app.follow_up_date) && (
+        <div className={`card__next${due ? ' card__next--due' : ''}`}>
+          {app.next_action || 'Follow up'}
+          {app.follow_up_date && <> · {due ? 'due ' : 'by '}{formatDate(app.follow_up_date)}</>}
+        </div>
+      )}
       <div className="card__links" onClick={(e) => e.stopPropagation()}>
         {app.job_url && (
           <a href={app.job_url} target="_blank" rel="noreferrer">Posting</a>

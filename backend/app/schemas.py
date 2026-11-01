@@ -20,6 +20,10 @@ class ApplicationOut(BaseModel):
     applied_date: date
     job_url: str
     notes: str
+    location: str
+    term: str
+    next_action: str
+    follow_up_date: Optional[date]
     source: str
     ats: str
     created_at: datetime
@@ -37,6 +41,10 @@ class ApplicationCreate(BaseModel):
     job_url: str = Field(default="", max_length=1000)
     notes: str = ""
     status: Status = Status.applied
+    location: str = Field(default="", max_length=200)
+    term: str = Field(default="", max_length=60)
+    next_action: str = Field(default="", max_length=300)
+    follow_up_date: Optional[date] = None
 
 
 class ApplicationUpdate(BaseModel):
@@ -46,6 +54,10 @@ class ApplicationUpdate(BaseModel):
     job_url: Optional[str] = Field(default=None, max_length=1000)
     notes: Optional[str] = None
     status: Optional[Status] = None
+    location: Optional[str] = Field(default=None, max_length=200)
+    term: Optional[str] = Field(default=None, max_length=60)
+    next_action: Optional[str] = Field(default=None, max_length=300)
+    follow_up_date: Optional[date] = None  # send null to clear
 
 
 class EmailRecordOut(BaseModel):

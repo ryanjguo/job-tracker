@@ -48,7 +48,9 @@ def to_out(a: Application) -> ApplicationOut:
     days = (date.today() - a.applied_date).days
     return ApplicationOut(
         id=a.id, company=a.company, role=a.role, status=a.status, applied_date=a.applied_date,
-        job_url=a.job_url, notes=a.notes, source=a.source, ats=a.ats, created_at=a.created_at,
+        job_url=a.job_url, notes=a.notes, location=a.location, term=a.term,
+        next_action=a.next_action, follow_up_date=a.follow_up_date,
+        source=a.source, ats=a.ats, created_at=a.created_at,
         status_changed_at=a.status_changed_at, days_since_applied=days,
         possibly_ghosted=a.status == Status.applied.value and days >= settings.ghost_after_days,
         email_url=email_url(a.email_message_id),
@@ -96,6 +98,8 @@ def add_application(body: ApplicationCreate, session: Session = Depends(get_sess
     a = create_application(
         session, company=body.company, role=body.role, applied_date=body.applied_date or date.today(),
         source="manual", job_url=body.job_url, notes=body.notes, status=body.status.value,
+        location=body.location, term=body.term, next_action=body.next_action,
+        follow_up_date=body.follow_up_date,
     )
     session.commit()
     return to_out(get_app_or_404(session, a.id))
@@ -106,6 +110,8 @@ def update_application(app_id: int, body: ApplicationUpdate, session: Session = 
     a = get_app_or_404(session, app_id)
     data = body.model_dump(exclude_unset=True)
     status = data.pop("status", None)
+    if "follow_up_date" in data:  # the one field that can be cleared with null
+        a.follow_up_date = data.pop("follow_up_date")
     for k, v in data.items():
         if v is not None:
             setattr(a, k, v.strip() if isinstance(v, str) and k != "notes" else v)
