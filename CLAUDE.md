@@ -13,7 +13,7 @@ See `PLAN.md` for the issue list, what's done, and what's next.
 - **Email:** stdlib `imaplib` with a Gmail App Password (no OAuth: avoids the 7-day refresh-token
   expiry Google applies to OAuth apps left in "Testing" mode)
 - **Classification:** plain regex rules in `backend/app/parser.py`. No LLM yet (see PLAN backlog)
-- **Frontend:** React + Vite + TypeScript in `frontend/` (not built yet)
+- **Frontend:** React + Vite + TypeScript in `frontend/`, plain CSS, no UI framework
 
 ## Layout
 
@@ -29,7 +29,12 @@ backend/
     main.py     FastAPI routes under /api; serves frontend/dist at / if built
     cli.py      python -m app.cli sync | test-imap | seed-demo
   tests/        pytest; FakeMailbox in test_sync_api.py, realistic samples in test_parser.py
-frontend/       (to do)
+frontend/
+  src/
+    api.ts      typed fetch wrappers + types mirroring backend/app/schemas.py
+    format.ts   date / "N days ago" helpers
+    App.tsx     state, tabs, optimistic status changes, sync button
+    components/ Header, StatsStrip, Board + AppCard (drag to change status), TableView
 ```
 
 ## Commands
@@ -41,6 +46,12 @@ python -m pytest -q                  # all tests
 python -m app.cli seed-demo          # fake data to try the UI
 uvicorn app.main:app --reload        # API on :8000
 python -m app.cli sync               # one sync run (cron calls this)
+
+cd ../frontend
+npm install
+npm run dev                          # UI on :5173, proxies /api to :8000
+npm run build                        # typecheck + build to dist/, served by FastAPI at /
+npm run lint
 ```
 
 ## Workflow (same as the user's `insync` repo, keep it this way)
