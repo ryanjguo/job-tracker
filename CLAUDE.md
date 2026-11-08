@@ -76,7 +76,10 @@ npm run lint
 
 - **Email only creates entries; statuses are manual.** The user explicitly wants this. Rejection,
   OA, interview and offer emails are *ignored* by the parser on purpose (checked before
-  confirmation phrases, since rejections also say "thank you for applying").
+  confirmation phrases, since rejections also say "thank you for applying"). Confirmations often
+  describe next steps ("if we decide not to move forward…", "candidates may receive a HackerRank
+  assessment"), so ignore rules skip conditional sentences, and when the subject is a confirmation
+  the OA / interview / offer rules only look at the subject.
 - **Three outcomes:** `confirmation` (auto-create), `review` (one-click accept in the UI, used when
   the company can't be found or is only guessed from a non-ATS sender), `ignore` (stored with a
   reason so missed emails can be rescued from a "skipped" list).

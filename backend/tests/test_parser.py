@@ -133,3 +133,61 @@ def test_non_ats_sender_guess_needs_review():
 def test_normalize_company():
     assert normalize_company("Acme, Inc.") == normalize_company("ACME")
     assert normalize_company("Globex Corporation") == "globex"
+
+
+# Confirmations that describe possible next steps must not be mistaken for rejections, OA invites
+# or interview requests (#26).
+NEXT_STEP_CONFIRMATIONS = [
+    ("Acme Robotics <no-reply@us.greenhouse-mail.io>", "Thank you for applying to Acme Robotics!",
+     "Thanks for your interest in Acme Robotics! We received your application for Software "
+     "Engineering Intern (Summer 2027). If we decide not to move forward with your application, "
+     "we will let you know by email.", "Acme Robotics", "Software Engineering Intern (Summer 2027)"),
+    ("Northwind <no-reply@hire.lever.co>", "Thank you for your application to Northwind",
+     "Thank you for applying to the Software Engineer Intern position at Northwind. If your "
+     "background is a fit, a recruiter will reach out to schedule an interview.",
+     "Northwind", "Software Engineer Intern"),
+    ("Initech <no-reply@ashbyhq.com>", "Thanks for applying to Initech",
+     "Thanks for applying to the Backend Intern role at Initech. Next steps: shortlisted "
+     "candidates may receive a HackerRank online assessment.", "Initech", "Backend Intern"),
+    ("Hooli Careers <hooli@myworkday.com>", "Thank you for applying!",
+     "Thank you for your interest in Hooli. We have received your application for the Data Intern "
+     "position. Unfortunately, due to the high volume of applications, we are unable to respond "
+     "to each applicant individually.", "Hooli", "Data Intern"),
+]
+
+
+@pytest.mark.parametrize("sender,subject,body,company,role", NEXT_STEP_CONFIRMATIONS)
+def test_confirmations_that_mention_next_steps(sender, subject, body, company, role):
+    r = classify(mk(sender, subject, body))
+    assert (r.kind, r.company, r.role) == ("confirmation", company, role), r
+
+
+REAL_REJECTIONS = [
+    "Thank you for your interest in Acme. After careful consideration, we will not be moving "
+    "forward with your application.",
+    "Thank you for applying. Unfortunately, we have decided to go with other candidates.",
+    "We appreciate your interest. We have decided to pursue other applicants for this role.",
+    "Thanks for applying to Acme. We will not be progressing your application at this time.",
+    "Unfortunately, the position has been filled.",
+]
+
+
+@pytest.mark.parametrize("body", REAL_REJECTIONS)
+def test_real_rejections_are_still_ignored(body):
+    r = classify(mk("Acme <no-reply@greenhouse.io>", "Your application to Acme", body))
+    assert (r.kind, r.reason) == ("ignore", "rejection"), r
+
+
+def test_oa_or_interview_in_the_subject_still_wins():
+    r = classify(mk("Acme <no-reply@greenhouse.io>", "Acme online assessment invitation",
+                    "Thanks for applying! Please complete the assessment within 7 days."))
+    assert (r.kind, r.reason) == ("ignore", "assessment / OA")
+    r = classify(mk("Recruiter <jane@acme.com>", "Interview request - Acme",
+                    "Thank you for your application! Could you share your availability for a call?"))
+    assert (r.kind, r.reason) == ("ignore", "interview / scheduling")
+
+
+def test_polite_questions_are_not_conditional():
+    r = classify(mk("Recruiter <jane@acme.com>", "Next steps with Acme",
+                    "Thanks for your application! Could you share your availability for a call?"))
+    assert (r.kind, r.reason) == ("ignore", "interview / scheduling")
