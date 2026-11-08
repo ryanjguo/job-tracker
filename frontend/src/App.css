@@ -355,6 +355,13 @@ textarea {
   width: min(360px, 100%);
 }
 
+.table-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+  font-size: 0.875rem;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

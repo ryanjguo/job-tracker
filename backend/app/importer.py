@@ -120,7 +120,10 @@ def clean_url(value: str) -> tuple[str, str]:
 
 def read_rows(lines: list[list[str]], today: date) -> tuple[list[ImportRow], list[str]]:
     """Turn raw CSV rows into ImportRows. Returns (rows, warnings)."""
+    from .exporter import unsafe_cell
+
     warnings: list[str] = []
+    lines = [[unsafe_cell(c) for c in row] for row in lines]  # undo export's formula guard
     header_idx = next(
         (i for i, row in enumerate(lines) if any(column_field(c) == "company" for c in row)), None
     )

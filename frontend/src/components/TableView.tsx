@@ -43,6 +43,10 @@ export function TableView({ apps, filtered = false, onStatus, onOpen }: Props) {
 
   return (
     <div className="table-view">
+      <div className="table-toolbar">
+        {/* everything, not just the filtered rows: it doubles as a backup */}
+        <a href="/api/export.csv" download>Export all as CSV</a>
+      </div>
       <table>
         <thead>
           <tr>
