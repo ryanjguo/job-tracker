@@ -3,7 +3,7 @@
 ## Status
 
 The backend (issues 1–8) is landed, one PR per issue (22 tests passing). Issues 9–10 (the dashboard)
-are landed; 11 (README) is not started.
+and 11 (README) are landed.
 
 ## Issues
 
@@ -19,7 +19,7 @@ are landed; 11 (README) is not started.
 | 8 | `feat(api): add review queue, sync-now and stats endpoints` | `main.py` (rest), API tests | done |
 | 9 | `feat(web): kanban board with drag to change status` | `frontend/` | done |
 | 10 | `feat(web): review queue, skipped emails, and add/edit forms` | `frontend/` | done |
-| 11 | `docs(readme): setup, architecture and design decisions` | `README.md` | to do |
+| 11 | `docs(readme): setup, architecture and design decisions` | `README.md` | done |
 | 22 | `feat(cli): import applications from a spreadsheet CSV` | `importer.py`, `cli.py`, `tests/test_import.py` | done |
 | 24 | `feat(db): add location, term, next action and follow-up date to applications` | `models.py`, `db.py`, API, `importer.py`, `frontend/` | done |
 | 26 | `fix(parser): stop dropping confirmations that mention next steps` | `parser.py`, tests | done |
