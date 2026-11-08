@@ -75,6 +75,7 @@ It only reads mail, and it uses `BODY.PEEK`, so nothing gets marked as read. Oth
 | `GHOST_AFTER_DAYS` | `30` | When an Applied card is flagged "possibly ghosted". |
 | `DUPLICATE_WINDOW_DAYS` | `60` | Two confirmations for the same company and role within this window count as one. |
 | `DATABASE_URL` | `sqlite:///./tracker.db` | Any SQLAlchemy URL (e.g. a hosted Postgres). |
+| `ALLOWED_HOSTS` | `localhost,127.0.0.1,::1` | Host names the server answers to. Add your domain if you host it. |
 
 ## Keeping it in sync
 
@@ -171,6 +172,9 @@ flowchart LR
 - **Nothing is lost silently.** Every email the parser looks at is stored with its outcome and
   reason, deleted applications don't come back on the next sync, and a failed background sync
   shows up in the header.
+- **Local, but not open to other websites.** There's no login, so the API only answers to known
+  host names and refuses writes that lack the dashboard's `X-Job-Tracker` header, which other
+  websites can't send. Hosting it on the internet would still need real authentication.
 - **No extension, nothing on other machines.** You can apply from any computer (including a
   managed work laptop); the inbox is the only input.
 

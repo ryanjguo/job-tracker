@@ -112,7 +112,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     res = await fetch(path, {
       ...init,
-      headers: { 'Content-Type': 'application/json', ...init?.headers },
+      // X-Job-Tracker: the API refuses writes without it (see backend/app/main.py)
+      headers: { 'Content-Type': 'application/json', 'X-Job-Tracker': '1', ...init?.headers },
     })
   } catch {
     throw new Error("Couldn't reach the API. Is the backend running on :8000?")

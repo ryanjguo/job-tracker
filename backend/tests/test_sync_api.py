@@ -48,7 +48,7 @@ def test_resync_is_idempotent():
 def test_review_accept_status_change_and_stats():
     with SessionLocal() as s:
         run_sync(s, FakeMailbox(ITEMS))
-    c = TestClient(app)
+    c = TestClient(app, headers={"X-Job-Tracker": "1"})
 
     review = c.get("/api/emails").json()
     assert [r["subject"] for r in review] == ["Thank you for applying!"]
@@ -68,12 +68,12 @@ def test_review_accept_status_change_and_stats():
 
 
 def test_sync_without_imap_config_is_a_clear_400():
-    r = TestClient(app).post("/api/sync")
+    r = TestClient(app, headers={"X-Job-Tracker": "1"}).post("/api/sync")
     assert r.status_code == 400 and "IMAP" in r.json()["detail"]
 
 
 def test_location_term_next_action_and_follow_up_via_api():
-    c = TestClient(app)
+    c = TestClient(app, headers={"X-Job-Tracker": "1"})
     a = c.post("/api/applications", json={
         "company": "Acme", "location": "Vancouver", "term": "Summer 2027",
         "next_action": "Follow up with recruiter", "follow_up_date": "2026-11-05",
