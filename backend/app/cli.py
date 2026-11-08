@@ -33,6 +33,30 @@ def cmd_sync(_args) -> int:
     return 0
 
 
+def cmd_recheck(args) -> int:
+    from .sync import recheck_from_imap
+
+    init_db()
+    with SessionLocal() as s:
+        try:
+            r = recheck_from_imap(s, days=args.days, dry_run=args.dry_run)
+        except Exception as e:
+            print(f"Re-check failed: {e}", file=sys.stderr)
+            return 1
+    verb = "Would change" if args.dry_run else "Changed"
+    print(f"Re-checked {r.candidates} skipped / review emails since {r.since} "
+          f"({r.not_found} no longer in the mailbox).")
+    print(f"{verb} {len(r.changes)}: {r.created} new applications, {r.duplicates} linked to existing ones, "
+          f"{r.review} in the review queue.")
+    for line in r.changes:
+        print("  " + line)
+    for err in r.errors:
+        print("  error:", err, file=sys.stderr)
+    if args.dry_run and r.changes:
+        print("Nothing saved (--dry-run). Run again without --dry-run to apply.")
+    return 0
+
+
 def cmd_test_imap(_args) -> int:
     from .mail import ImapSource
 
@@ -123,6 +147,10 @@ def main(argv=None) -> int:
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("sync", help="pull new confirmation emails").set_defaults(fn=cmd_sync)
     sub.add_parser("test-imap", help="check IMAP credentials").set_defaults(fn=cmd_test_imap)
+    rc = sub.add_parser("recheck", help="run the current rules over emails skipped by an older version")
+    rc.add_argument("--days", type=int, default=90, help="how far back to look (default 90)")
+    rc.add_argument("--dry-run", action="store_true", help="show what would change, save nothing")
+    rc.set_defaults(fn=cmd_recheck)
     sub.add_parser("seed-demo", help="add fake data to try the UI").set_defaults(fn=cmd_seed_demo)
     imp = sub.add_parser("import-csv", help="add applications from a spreadsheet saved as CSV")
     imp.add_argument("file", help="path to the .csv file")

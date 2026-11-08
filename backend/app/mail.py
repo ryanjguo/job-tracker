@@ -28,6 +28,7 @@ class MailHeader:
 class MailSource(Protocol):
     def fetch_headers(self, since: date) -> list[MailHeader]: ...
     def fetch_body(self, uid: str) -> str: ...
+    def find_uid(self, message_id: str) -> str | None: ...
 
 
 # --------------------------------------------------------------------------------------
@@ -146,6 +147,22 @@ class ImapSource:
                 if m:
                     headers.append(_parse_headers(item[1], m.group(1).decode()))
         return headers
+
+    def find_uid(self, message_id: str) -> str | None:
+        """UID of the message with this Message-ID in the open folder, or None."""
+        assert self.conn
+        mid = message_id.replace('"', "").strip()
+        if not mid or mid.startswith("<generated-"):
+            return None
+        typ, data = self.conn.uid("SEARCH", None, "HEADER", "Message-ID", f'"{mid}"')
+        if typ != "OK" or not data or not data[0]:
+            if "gmail" not in self.host.lower():
+                return None
+            # Gmail's own search syntax, in case HEADER search misses
+            typ, data = self.conn.uid("SEARCH", None, "X-GM-RAW", f'"rfc822msgid:{mid.strip("<>")}"')
+            if typ != "OK" or not data or not data[0]:
+                return None
+        return data[0].split()[-1].decode()
 
     def fetch_body(self, uid: str) -> str:
         assert self.conn
