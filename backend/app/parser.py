@@ -155,18 +155,26 @@ SUBJECT_PATTERNS = [
     re.compile(rf"^thank(?:s| you) for (?:applying|your application|your interest)(?: to| at| with| in)? {_CO}{_END}", re.I),
     re.compile(rf"^your application (?:to|at|with) {_CO}{_END}", re.I),
     re.compile(rf"^{_CO}\s*[-–—|:]\s*(?:application (?:received|confirmation|submitted)|thank(?:s| you) for (?:applying|your application)){_END}", re.I),
-    re.compile(rf"^(?:application (?:received|confirmation|submitted)|thank(?:s| you) for (?:applying|your application))\s*[-–—|:]\s*{_ROLE}(?: (?:at|with|[-–—|]) {_CO})?{_END}", re.I),
-    re.compile(rf"^we(?:'ve| have)? received your application(?: for (?:the )?{_ROLE})?(?: at {_CO})?{_END}", re.I),
+    re.compile(rf"^(?:application (?:received|confirmation|submitted)|thank(?:s| you) for (?:applying|your application)|confirmation of (?:your )?application)\s*[-–—|:]\s*{_ROLE}(?: (?:at|with|[-–—|]) {_CO})?{_END}", re.I),
+    re.compile(rf"^we(?:'ve| have)? received your application(?: for (?:the )?{_ROLE})?(?: (?:at|to|with) {_CO})?{_END}", re.I),
+    # "Your application for Software Developer has been received"
+    re.compile(rf"^your application for (?:the )?{_ROLE} (?:has been|was|is) (?:received|submitted){_END}", re.I),
+    # "Your Acme application"
+    re.compile(rf"^your {_CO} application{_END}", re.I),
 ]
 
 _BODY_ROLE_AT_CO = [
     rf"(?:application|applying|applied) (?:for|to) (?:the |our )?{_ROLE} (?:position|role|job|opening|posting)?\s*(?:at|with) {_CO}(?=[.,!\n]|\s+(?:and|we|has|is|was)\b)",
     rf"interest in (?:the |our )?{_ROLE} (?:position|role|opening|job) (?:at|with) {_CO}(?=[.,!\n]|\s+(?:and|we)\b)",
 ]
+# A role may contain commas ("Software Engineer, New Grad - 2027"); it ends at a new clause
+# (", and we…"), a sentence end, or a line break.
+_ROLE_STOP = r"(?=,\s*(?:and|we|which|our|as|so|but|it|you|i|thank|please)\b|,\s*$|[!\n]|\.\s|\.$|\s+(?:and|has|was|is|at|with)\b)"
 _BODY_ROLE = [
+    rf"\b(?:the )?(?:position|role|post|job) of (?:a |an )?{_ROLE}{_ROLE_STOP}",
     rf"(?:application|applying|applied|interest) (?:for|to|in) (?:the |our |a )?{_ROLE} (?:position|role|job|opening|posting)\b",
     r"\b(?:position|job title|role|job)\s*:\s*(?P<role>[^\n]{2,120})$",
-    rf"(?:received your application|your application|application) for (?:the |our )?{_ROLE}(?=[,!\n]|\.\s|\.$|\s+(?:and|has|was|is)\b)",
+    rf"(?:received your application|your application|application) for (?:the |our )?{_ROLE}{_ROLE_STOP}",
 ]
 _BODY_CO = [
     rf"(?:interest in|applying to|applying at|application to|application with|apply to|applied to|joining|here at|team at|career(?:s)? at) {_CO}(?=[.,!\n]|\s+(?:and|we|has|is|was|for)\b)",
@@ -238,6 +246,9 @@ def clean_company(raw: str) -> str:
     s = re.sub(r"^the\s+", "", s, flags=re.I) if s.lower().startswith("the ") and len(s.split()) > 2 else s
     if not s or len(s) > 60 or len(s.split()) > 7:
         return ""
+    # "applying to the Platform Engineer role" is a role, not a company
+    if re.search(r"\b(?:role|position|opening|posting|job|internship|program)$", s, re.I):
+        return ""
     if BAD_COMPANY_RE.match(s):
         return ""
     if s.lower() in ATS_NAMES:
@@ -245,16 +256,26 @@ def clean_company(raw: str) -> str:
     return s
 
 
+_REQ_ID = r"(?:[A-Z]{1,4}-?\d{3,}|\d{5,})"  # R-12345, JR123456, REQ-1234, 123456 (not "2027")
+
+
 def clean_role(raw: str, company: str = "") -> str:
     s = (raw or "").strip().strip("\"'“”‘’ ")
     s = re.sub(r"^(?:the|our|a|an)\s+", "", s, flags=re.I)
+    s = re.sub(r"^(?:position|role|post|job) of\s+(?:a |an )?", "", s, flags=re.I)
+    # requisition IDs: "Requisition 12345 - X", "X (R-12345)", "X - JR123456"
+    # (case-sensitive on purpose: IDs are upper case, so "Intern - Fall2027" survives)
+    s = re.sub(r"^(?i:req(?:uisition)?)\.?(?:\s*(?i:id|number|no)\.?)?\s*[:#]?\s*[\w-]*\d[\w-]*\s*[-–—:|]\s*", "", s)
+    s = re.sub(rf"\s*[(\[](?:(?i:req(?:uisition)?)\.?\s*(?i:id)?\s*[:#]?\s*)?{_REQ_ID}[)\]]$", "", s)
+    s = re.sub(rf"\s+[-–—|]\s*(?:(?i:req(?:uisition)?)\.?\s*(?i:id)?\s*[:#]?\s*)?{_REQ_ID}$", "", s)
     s = re.sub(r"\s+(?:position|role|job|opening|posting)$", "", s, flags=re.I)
     if company:
         s = re.sub(rf"\s+(?:at|with)\s+{re.escape(company)}.*$", "", s, flags=re.I)
     s = re.sub(r"[!.,:;]+$", "", s).strip()
     if not s or len(s) > 100 or len(s.split()) > 14:
         return ""
-    if s.lower() in {"job", "position", "role", "opening", "application"}:
+    if s.lower() in {"job", "position", "role", "opening", "application", "the", "a", "an", "our",
+                     "this", "that", "your"}:
         return ""
     # "Thanks for applying to Acme - Application received": the second half isn't a role
     if CONFIRM_RE.search(s) or re.match(r"(?:application|thank)", s, re.I):
@@ -366,11 +387,14 @@ def classify(email: EmailInput) -> ParseResult:
 
     if not company:
         for rx in BODY_CO_RES:
-            m = rx.search(body)
-            if m:
-                company = clean_company(m.group("company"))
+            for m in rx.finditer(body):
+                raw = m.group("company")
+                # real names start with a capital ("applying to the Backend role" isn't a company)
+                company = clean_company(raw) if raw[:1].isupper() else ""
                 if company:
                     break
+            if company:
+                break
 
     if ats == "linkedin" and not role:
         role = linkedin_role(body, company)
