@@ -48,7 +48,11 @@ def email_url(message_id: str) -> str | None:
     if not message_id or not settings.is_gmail or message_id.startswith("<demo") \
             or message_id.startswith("<generated"):
         return None
-    return "https://mail.google.com/mail/u/0/#search/" + quote(f"rfc822msgid:{message_id.strip('<>')}")
+    # authuser picks the right account however many Google accounts the browser is signed into
+    # (/u/0 would open the first one, e.g. a work account).
+    account = f"?authuser={quote(settings.imap_user, safe='@')}" if settings.imap_user else "u/0/"
+    search = quote(f"rfc822msgid:{message_id.strip('<>')}")
+    return f"https://mail.google.com/mail/{account}#search/{search}"
 
 
 def to_out(a: Application) -> ApplicationOut:
