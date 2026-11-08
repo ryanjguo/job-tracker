@@ -16,29 +16,25 @@ const COLUMNS: [SortKey, string][] = [
 ]
 
 interface Props {
-  apps: Application[]
+  apps: Application[] // already filtered by the FilterBar
+  filtered?: boolean
   onStatus: (id: number, status: Status) => void
   onOpen?: (app: Application) => void
 }
 
-export function TableView({ apps, onStatus, onOpen }: Props) {
-  const [query, setQuery] = useState('')
+export function TableView({ apps, filtered = false, onStatus, onOpen }: Props) {
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'applied_date', dir: -1 })
 
   const rows = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    const filtered = q
-      ? apps.filter((a) => [a.company, a.role, a.location, a.term, a.next_action, a.notes, a.ats].some((v) => v.toLowerCase().includes(q)))
-      : apps
     // blanks sort last in ascending order
     const rank = (a: Application) =>
       sort.key === 'status' ? STATUSES.indexOf(a.status) : (a[sort.key] || '\uffff').toLowerCase()
-    return [...filtered].sort((a, b) => {
+    return [...apps].sort((a, b) => {
       const x = rank(a)
       const y = rank(b)
       return (x < y ? -1 : x > y ? 1 : b.id - a.id) * sort.dir
     })
-  }, [apps, query, sort])
+  }, [apps, sort])
 
   const today = todayISO()
 
@@ -47,14 +43,6 @@ export function TableView({ apps, onStatus, onOpen }: Props) {
 
   return (
     <div className="table-view">
-      <input
-        type="search"
-        className="search"
-        placeholder="Search company, role, location, notes…"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        aria-label="Search applications"
-      />
       <table>
         <thead>
           <tr>
@@ -108,7 +96,7 @@ export function TableView({ apps, onStatus, onOpen }: Props) {
           ))}
           {rows.length === 0 && (
             <tr>
-              <td colSpan={COLUMNS.length + 1} className="empty">{query ? 'No matches.' : 'No applications yet.'}</td>
+              <td colSpan={COLUMNS.length + 1} className="empty">{filtered ? 'No matches.' : 'No applications yet.'}</td>
             </tr>
           )}
         </tbody>

@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api, errorMessage, type Application, type ApplicationInput, type Meta, type Stats, type Status } from './api'
 import { ApplicationModal } from './components/ApplicationModal'
 import { Board } from './components/Board'
+import { FilterBar } from './components/FilterBar'
 import { Header } from './components/Header'
 import { ReviewQueue } from './components/ReviewQueue'
 import { StatsStrip } from './components/StatsStrip'
 import { TableView } from './components/TableView'
+import { applyFilters, isFiltering, NO_FILTERS, termsOf, type Filters } from './filters'
 import './App.css'
 
 type View = 'board' | 'table' | 'review'
@@ -22,6 +24,9 @@ function App() {
   // null = closed, 'new' = add form, otherwise the application being edited
   const [editing, setEditing] = useState<Application | 'new' | null>(null)
   const [syncCount, setSyncCount] = useState(0) // remounts the review list after a sync
+  const [filters, setFilters] = useState<Filters>(NO_FILTERS)
+  const shown = useMemo(() => applyFilters(apps, filters), [apps, filters])
+  const terms = useMemo(() => termsOf(apps), [apps])
 
   const load = useCallback(
     () =>
@@ -152,13 +157,17 @@ function App() {
         </button>
       </nav>
 
+      {view !== 'review' && !loading && apps.length > 0 && (
+        <FilterBar filters={filters} onChange={setFilters} terms={terms} shown={shown.length} total={apps.length} />
+      )}
+
       <main>
         {loading ? (
           <p className="muted">Loading…</p>
         ) : view === 'board' ? (
-          <Board apps={apps} onStatus={changeStatus} onOpen={setEditing} />
+          <Board apps={shown} onStatus={changeStatus} onOpen={setEditing} />
         ) : view === 'table' ? (
-          <TableView apps={apps} onStatus={changeStatus} onOpen={setEditing} />
+          <TableView apps={shown} filtered={isFiltering(filters)} onStatus={changeStatus} onOpen={setEditing} />
         ) : (
           <ReviewQueue key={syncCount} onChanged={load} onError={showError} />
         )}
