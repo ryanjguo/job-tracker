@@ -27,7 +27,7 @@ def test_rejected(raw):
 
 
 def test_api_rejects_bad_links_everywhere():
-    c = TestClient(app)
+    c = TestClient(app, headers={"X-Job-Tracker": "1"})
     r = c.post("/api/applications", json={"company": "Acme", "job_url": "javascript:alert(1)"})
     assert r.status_code == 422 and "http" in r.text
     ok = c.post("/api/applications", json={"company": "Acme", "job_url": "jobs.acme.com/1"}).json()

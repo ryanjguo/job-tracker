@@ -6,6 +6,7 @@ _tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
 os.environ["DATABASE_URL"] = f"sqlite:///{_tmp.name}"
 os.environ["IMAP_USER"] = ""
 os.environ["IMAP_PASSWORD"] = ""
+os.environ["ALLOWED_HOSTS"] = "localhost,127.0.0.1,testserver"
 
 import pytest  # noqa: E402
 

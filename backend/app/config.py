@@ -34,6 +34,11 @@ class Settings:
     duplicate_window_days: int = _int("DUPLICATE_WINDOW_DAYS", 60)
     # Sync in the background every N minutes while the server runs (0 = only "Sync now" / cron)
     sync_every_minutes: int = _int("SYNC_EVERY_MINUTES", 0)
+    # Host names the server answers to (blocks DNS-rebinding pages). Add your domain if you host
+    # it, or "*" to allow any.
+    allowed_hosts: tuple[str, ...] = tuple(
+        h.strip() for h in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,::1").split(",") if h.strip()
+    )
 
     @property
     def imap_configured(self) -> bool:

@@ -7,7 +7,9 @@ from datetime import date, timedelta
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
@@ -38,6 +40,28 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="Job Tracker", lifespan=lifespan)
+
+# --------------------------------------------------------------------------------------
+# Cross-site protection. There's no login, so make sure requests come from the dashboard:
+#  - only answer to known host names (a DNS-rebinding page arrives with its own host name)
+#  - writes need a custom header, which other websites can't add without a CORS preflight
+#    that this API never approves (plain form posts / fetch no-cors can't set it)
+# --------------------------------------------------------------------------------------
+CSRF_HEADER = "X-Job-Tracker"
+WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(settings.allowed_hosts))
+
+
+@app.middleware("http")
+async def require_dashboard_header(request: Request, call_next):
+    if (request.method in WRITE_METHODS and request.url.path.startswith("/api/")
+            and CSRF_HEADER.lower() not in request.headers):
+        return JSONResponse(
+            {"detail": f"Missing {CSRF_HEADER} header: writes are only accepted from the dashboard"},
+            status_code=403,
+        )
+    return await call_next(request)
 
 
 # --------------------------------------------------------------------------------------

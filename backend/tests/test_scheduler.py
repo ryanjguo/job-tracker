@@ -77,6 +77,6 @@ def test_meta_reports_schedule_and_error(monkeypatch):
         monkeypatch.setattr(sync_mod, "ImapSource", BrokenImap)
         with pytest.raises(OSError):
             sync_from_imap(s, CFG)
-    meta = TestClient(app).get("/api/meta").json()
+    meta = TestClient(app, headers={"X-Job-Tracker": "1"}).get("/api/meta").json()
     assert meta["sync_every_minutes"] == 0  # IMAP isn't configured in tests
     assert "invalid credentials" in meta["last_sync_error"]

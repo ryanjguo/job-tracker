@@ -97,5 +97,8 @@ npm run lint
 - **Schema changes without a reset:** `init_db` adds columns the models have but the database
   lacks, so a new column must be nullable or have a `server_default`. Renames/type changes still
   need a real migration.
+- **No login, but cross-site safe:** writes under `/api` need an `X-Job-Tracker` header (api.ts
+  sends it; tests use `TestClient(app, headers={"X-Job-Tracker": "1"})`), and TrustedHostMiddleware
+  only answers `ALLOWED_HOSTS`. Real auth is still needed before hosting it publicly.
 - **Work laptop:** the user applies from a managed work laptop too. Email-based creation works
   regardless of device; no extension or software should be required on that machine.
