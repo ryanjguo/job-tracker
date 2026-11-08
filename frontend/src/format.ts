@@ -26,6 +26,13 @@ export function timeAgo(iso: string, now: Date = new Date()): string {
   return days === 1 ? 'yesterday' : `${days} days ago`
 }
 
+/** 180 -> "3h", 90 -> "90 min", 1440 -> "day". For "Auto-sync every …". */
+export function interval(minutes: number): string {
+  if (minutes % 1440 === 0) return minutes === 1440 ? 'day' : `${minutes / 1440} days`
+  if (minutes % 60 === 0) return `${minutes / 60}h`
+  return `${minutes} min`
+}
+
 export function percent(rate: number): string {
   return `${Math.round(rate * 100)}%`
 }

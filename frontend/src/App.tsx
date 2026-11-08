@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, errorMessage, type Application, type ApplicationInput, type Meta, type Stats, type Status } from './api'
 import { ApplicationModal } from './components/ApplicationModal'
 import { Board } from './components/Board'
@@ -38,6 +38,30 @@ function App() {
 
   useEffect(() => {
     load().finally(() => setLoading(false))
+  }, [load])
+
+  // Pick up background syncs (SYNC_EVERY_MINUTES): check /api/meta once a minute and reload
+  // everything when a sync has finished since we last looked.
+  const lastSync = useRef<string | null | undefined>(undefined)
+  useEffect(() => {
+    if (meta) lastSync.current = meta.last_sync_at
+  }, [meta])
+  useEffect(() => {
+    const timer = setInterval(async () => {
+      if (document.hidden) return
+      try {
+        const m = await api.meta()
+        if (lastSync.current !== undefined && m.last_sync_at !== lastSync.current) {
+          await load()
+          setSyncCount((n) => n + 1)
+        } else {
+          setMeta(m)
+        }
+      } catch {
+        // backend restarting etc.: try again next minute
+      }
+    }, 60_000)
+    return () => clearInterval(timer)
   }, [load])
 
   const showError = useCallback((text: string) => setNotice({ kind: 'error', text }), [])

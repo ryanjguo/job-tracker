@@ -77,6 +77,8 @@ export interface Meta {
   ghost_after_days: number
   statuses: Status[]
   review_count: number
+  sync_every_minutes: number // 0 = no background sync
+  last_sync_error: string | null
 }
 
 export interface EmailRecord {

@@ -104,3 +104,5 @@ class MetaOut(BaseModel):
     ghost_after_days: int
     statuses: list[str]
     review_count: int
+    sync_every_minutes: int  # 0 = no background sync
+    last_sync_error: Optional[str]

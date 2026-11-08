@@ -114,6 +114,18 @@ textarea {
   background: var(--ok-bg);
 }
 
+.sync-error {
+  color: var(--danger);
+  background: var(--danger-bg);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 0.875rem;
+  max-width: 28rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .notice--error {
   background: var(--danger-bg);
   color: var(--danger);

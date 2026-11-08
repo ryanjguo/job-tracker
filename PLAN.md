@@ -22,6 +22,12 @@ are landed; 11 (README) is not started.
 | 11 | `docs(readme): setup, architecture and design decisions` | `README.md` | to do |
 | 22 | `feat(cli): import applications from a spreadsheet CSV` | `importer.py`, `cli.py`, `tests/test_import.py` | done |
 | 24 | `feat(db): add location, term, next action and follow-up date to applications` | `models.py`, `db.py`, API, `importer.py`, `frontend/` | done |
+| 26 | `fix(parser): stop dropping confirmations that mention next steps` | `parser.py`, tests | done |
+| 27 | `fix(parser): read the role from "Your application to Acme \| Role" subjects` | `parser.py`, tests | done |
+| 28 | `feat(sync): sync automatically on a schedule while the server runs` | `scheduler.py`, `sync.py`, `main.py`, header | done |
+| 29 | `feat(web): search and filter the board` | `frontend/` | to do |
+| 30 | `fix(web): open cards from the keyboard` | `frontend/` | to do |
+| 31 | `feat(sync): suggest status changes from rejection, OA and interview emails` | | needs a decision |
 
 Note for 7/8: `main.py` and `schemas.py` hold both; split by route group, or land both in 7 and
 keep 8 for the remaining endpoints + tests. Each PR must pass tests on its own.
@@ -59,7 +65,6 @@ keep 8 for the remaining endpoints + tests. Each PR must pass tests on its own.
 
 ## Backlog (after v1)
 
-- Run sync on a schedule (cron / launchd; doc it in the README).
 - LLM fallback for the review queue only (Claude Haiku tool-use with a status enum).
 - Enricher: find the posting URL via Greenhouse / Lever public job-board APIs.
 - Posting watcher: flag saved postings that went offline (likely filled).
