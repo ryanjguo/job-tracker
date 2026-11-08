@@ -31,7 +31,7 @@ backend/
     scheduler.py background thread that syncs every SYNC_EVERY_MINUTES while the server runs
     main.py     FastAPI routes under /api; serves frontend/dist at / if built
     importer.py CSV import: finds the header row, maps columns, extra columns go to notes
-    cli.py      python -m app.cli sync | test-imap | seed-demo | import-csv
+    cli.py      python -m app.cli sync | recheck | test-imap | seed-demo | import-csv
   tests/        pytest; FakeMailbox in test_sync_api.py, realistic samples in test_parser.py
 frontend/
   src/
@@ -53,6 +53,7 @@ python -m app.cli seed-demo          # fake data to try the UI
 python -m app.cli import-csv FILE.csv --dry-run   # preview, then drop --dry-run to import
 uvicorn app.main:app --reload        # API on :8000
 python -m app.cli sync               # one sync run (cron calls this)
+python -m app.cli recheck --dry-run  # re-run current parser rules over skipped / review emails
 
 cd ../frontend
 npm install
@@ -72,6 +73,7 @@ npm run lint
 - **Body:** 1–3 sentences on *how*, then `Closes #N`.
 - First commit `chore: initial commit`, then `chore(repo): scaffold ...`.
 - Tests pass before every merge. A new parser case gets a test in `tests/test_parser.py`.
+- After a parser fix that changes outcomes, mention `recheck` in the PR so existing data catches up.
 - Never commit `.env`, `*.db`, real email content or the user's own spreadsheet (sanitize samples:
   fake names/companies).
 

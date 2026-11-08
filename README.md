@@ -92,6 +92,25 @@ Pick one:
 
 Syncs are safe to repeat: every email is recorded by its Message-ID, so nothing is added twice.
 
+## Upgrading
+
+```bash
+git pull
+cd backend && pip install -r requirements.txt
+cd ../frontend && npm install && npm run build
+```
+
+The database upgrades itself on startup. Parser fixes only apply to new mail, so after
+updating, run the current rules over emails an older version skipped:
+
+```bash
+cd backend
+python -m app.cli recheck --dry-run   # lists what would change
+python -m app.cli recheck             # applies it (last 90 days; --days to change)
+```
+
+Emails you dismissed are left alone.
+
 ## Importing an existing spreadsheet
 
 Export the sheet as CSV, then preview and import:

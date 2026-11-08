@@ -108,15 +108,19 @@ def find_duplicate(session: Session, company: str, role: str, on: date,
 # The sync itself
 # --------------------------------------------------------------------------------------
 def process_email(session: Session, header: MailHeader, body: str, cfg: Settings,
-                  summary: SyncSummary) -> None:
+                  summary: SyncSummary, record: EmailRecord | None = None) -> EmailRecord:
+    """Classify one email and act on it. Pass `record` to re-process an email that was already
+    stored (see recheck); otherwise a new EmailRecord is created."""
     result = classify(EmailInput(header.message_id, header.sender, header.subject, body))
     applied_on = local_date(header.received_at)
-    record = EmailRecord(
-        message_id=header.message_id, sender=header.sender[:500], subject=header.subject[:1000],
-        received_at=header.received_at, snippet=" ".join(body.split())[:600],
-        guessed_company=result.company, guessed_role=result.role, ats=result.ats,
-        reason=result.reason, outcome="ignored",
-    )
+    if record is None:
+        record = EmailRecord(message_id=header.message_id)
+    record.sender, record.subject = header.sender[:500], header.subject[:1000]
+    record.received_at = header.received_at
+    record.snippet = " ".join(body.split())[:600]
+    record.guessed_company, record.guessed_role = result.company, result.role
+    record.ats, record.reason = result.ats, result.reason
+    record.outcome, record.application_id = "ignored", None
 
     if result.kind == "ignore":
         summary.ignored += 1
@@ -141,6 +145,7 @@ def process_email(session: Session, header: MailHeader, body: str, cfg: Settings
             record.outcome = "review"
             summary.review += 1
     session.add(record)
+    return record
 
 
 def run_sync(session: Session, source: MailSource, cfg: Settings = default_settings,
@@ -188,6 +193,76 @@ def _record_error(session: Session, message: str) -> None:
     session.rollback()
     set_meta(session, LAST_ERROR_KEY, message[:500])
     session.commit()
+
+
+# --------------------------------------------------------------------------------------
+# Re-check: run the current rules over emails an older parser skipped or queued
+# --------------------------------------------------------------------------------------
+RECHECK_OUTCOMES = ("ignored", "review")  # dismissed / created / accepted are left alone
+
+
+@dataclass
+class RecheckSummary(SyncSummary):
+    not_found: int = 0
+    changes: list[str] = field(default_factory=list)
+
+
+def recheck(session: Session, source: MailSource, cfg: Settings = default_settings,
+            days: int = 90, dry_run: bool = False, now: datetime | None = None) -> RecheckSummary:
+    """Re-download skipped / review-queue emails by Message-ID and run them through
+    process_email again, so parser fixes reach mail that was synced before the fix."""
+    now = now or utcnow()
+    cutoff = now - timedelta(days=days)
+    summary = RecheckSummary(since=cutoff.date().isoformat())
+    records = session.scalars(
+        select(EmailRecord).where(EmailRecord.outcome.in_(RECHECK_OUTCOMES))
+        .order_by(EmailRecord.received_at)
+    ).all()
+    records = [r for r in records if r.received_at is None or _aware(r.received_at) >= cutoff]
+    summary.scanned = len(records)
+
+    for rec in records:
+        before = (rec.outcome, rec.reason)
+        try:
+            uid = source.find_uid(rec.message_id)
+            if uid is None:
+                summary.not_found += 1
+                continue
+            summary.candidates += 1
+            header = MailHeader(uid, rec.message_id, rec.sender, rec.subject, rec.received_at)
+            process_email(session, header, source.fetch_body(uid), cfg, summary, record=rec)
+            session.flush()
+            if (rec.outcome, rec.reason) != before:
+                what = rec.guessed_company or rec.subject[:60]
+                if rec.guessed_role:
+                    what += f" ({rec.guessed_role})"
+                summary.changes.append(f"{what}: {before[0]} ({before[1]}) -> {rec.outcome} ({rec.reason})")
+            if not dry_run:
+                session.commit()
+        except Exception as e:
+            session.rollback()
+            summary.errors.append(f"{rec.subject[:80]!r}: {e}")
+    if dry_run:
+        session.rollback()
+    return summary
+
+
+def _aware(dt: datetime) -> datetime:
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def recheck_from_imap(session: Session, cfg: Settings = default_settings, days: int = 90,
+                      dry_run: bool = False) -> RecheckSummary:
+    if not cfg.imap_configured:
+        raise RuntimeError("IMAP is not configured. Set IMAP_USER and IMAP_PASSWORD in backend/.env")
+    if not _lock.acquire(blocking=False):
+        raise SyncBusy("A sync is already running")
+    try:
+        with ImapSource(cfg.imap_host, cfg.imap_port, cfg.imap_user, cfg.imap_password,
+                        cfg.imap_folder) as src:
+            return recheck(session, src, cfg, days=days, dry_run=dry_run)
+    finally:
+        _lock.release()
 
 
 def sync_from_imap(session: Session, cfg: Settings = default_settings) -> SyncSummary:
