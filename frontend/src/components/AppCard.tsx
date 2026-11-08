@@ -22,7 +22,23 @@ export function AppCard({ app, onStatus, onOpen }: Props) {
       data-testid={`card-${app.id}`}
     >
       <div className="card__top">
-        <strong className="card__company">{app.company}</strong>
+        {onOpen ? (
+          // The real control for keyboard / screen-reader users; a mouse click anywhere on the
+          // card does the same. Not the whole card, so the links inside stay separate controls.
+          <button
+            type="button"
+            className="card__company card__open"
+            onClick={(e) => {
+              e.stopPropagation()
+              onOpen(app)
+            }}
+            aria-label={`Edit ${app.company}${app.role ? `, ${app.role}` : ''}`}
+          >
+            {app.company}
+          </button>
+        ) : (
+          <strong className="card__company">{app.company}</strong>
+        )}
         {app.ats && <span className="badge">{app.ats}</span>}
       </div>
       {app.role && <div className="card__role">{app.role}</div>}
