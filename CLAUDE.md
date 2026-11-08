@@ -31,6 +31,7 @@ backend/
     scheduler.py background thread that syncs every SYNC_EVERY_MINUTES while the server runs
     main.py     FastAPI routes under /api; serves frontend/dist at / if built
     importer.py CSV import: finds the header row, maps columns, extra columns go to notes
+    urls.py     normalize_job_url: job links must be http(s) (they're rendered as <a href>)
     cli.py      python -m app.cli sync | recheck | test-imap | seed-demo | import-csv
   tests/        pytest; FakeMailbox in test_sync_api.py, realistic samples in test_parser.py
 frontend/

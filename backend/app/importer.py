@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from .models import Application, Status, utcnow
 from .parser import normalize_company, normalize_role
 from .sync import create_application
+from .urls import normalize_job_url
 
 FIELDS = ("company", "role", "applied_date", "status", "job_url", "notes",
           "location", "term", "next_action", "follow_up_date")
@@ -109,11 +110,12 @@ def map_status(value: str) -> Status | None:
     return None
 
 
-def clean_url(value: str) -> str:
-    v = value.strip()
-    if v and not re.match(r"^[a-z][a-z0-9+.-]*://", v, re.I) and "." in v and " " not in v:
-        v = "https://" + v
-    return v
+def clean_url(value: str) -> tuple[str, str]:
+    """(url, note): a link that isn't a web address is kept as a note instead of a link."""
+    try:
+        return normalize_job_url(value), ""
+    except ValueError:
+        return "", value.strip()
 
 
 def read_rows(lines: list[list[str]], today: date) -> tuple[list[ImportRow], list[str]]:
@@ -166,13 +168,18 @@ def read_rows(lines: list[list[str]], today: date) -> tuple[list[ImportRow], lis
             if follow_up is None:  # e.g. "ASAP": keep the words
                 notes.append(f"{headers[_col(mapping, 'follow_up_date')]}: {raw_follow}")
 
+        job_url, bad_link = clean_url(values.get("job_url", ""))
+        if bad_link:
+            notes.append(f"Link in spreadsheet: {bad_link}")
+            warnings.append(f"line {offset}: {company}: link {bad_link!r} isn't a web address, kept as a note")
+
         for i, h in enumerate(headers):
             if mapping[i] is None and h and cells[i]:
                 notes.append(f"{h}: {cells[i]}")
 
         rows.append(ImportRow(
             line=offset, company=company, role=values.get("role", ""), applied_date=applied,
-            status=status.value, job_url=clean_url(values.get("job_url", "")),
+            status=status.value, job_url=job_url,
             notes="\n".join(n for n in notes if n),
             location=values.get("location", ""), term=values.get("term", ""),
             next_action=values.get("next_action", ""), follow_up_date=follow_up,

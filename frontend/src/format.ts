@@ -48,3 +48,8 @@ export function todayISO(): string {
 export function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
+
+/** Only http(s) links are rendered (the API enforces this too; this covers older rows). */
+export function safeHref(url: string | null | undefined): string | undefined {
+  return url && /^https?:\/\//i.test(url.trim()) ? url.trim() : undefined
+}
