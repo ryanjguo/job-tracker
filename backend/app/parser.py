@@ -73,27 +73,62 @@ CONFIRM_RE = re.compile("|".join(CONFIRM_PHRASES), re.I)
 
 # Things that are *not* new applications. Checked before confirmation phrases, because
 # rejections and OA invites often also say "thank you for applying".
-IGNORE_RULES: list[tuple[str, re.Pattern]] = [
+#
+# Each rule: (reason, pattern, skip_conditional, subject_only_if_confirmation)
+#   skip_conditional: ignore matches inside a conditional sentence ("If we decide not to move
+#       forward...", "candidates may receive a HackerRank assessment"), which confirmations use
+#       to describe what *might* happen next.
+#   subject_only_if_confirmation: when the subject itself is a confirmation ("Thank you for
+#       applying to Acme"), only count this rule if it matches the subject, not the body.
+IGNORE_RULES: list[tuple[str, re.Pattern, bool, bool]] = [
     ("job alert / recommendations", re.compile(
         r"job alert|jobs? (?:for you|you may|recommended|matching)|recommended jobs|new jobs|"
         r"top job picks|is hiring|are hiring|people also viewed|similar jobs|jobs near you|"
-        r"apply now to|still accepting applications|unsubscribe from (?:job|these) alerts", re.I)),
+        r"apply now to|still accepting applications|unsubscribe from (?:job|these) alerts", re.I),
+     False, False),
+    # No bare "unfortunately": confirmations say "Unfortunately, due to the high volume of
+    # applications, we can't respond to everyone". Only phrases that actually reject.
     ("rejection", re.compile(
-        r"unfortunately|regret to inform|not (?:to )?(?:be )?mov(?:e|ing) forward|"
-        r"(?:decided|chosen|elected) to (?:pursue|proceed with|move forward with) other|"
-        r"other candidates (?:whose|who)|position has been filled|no longer (?:under consideration|considering)|"
-        r"not been selected|will not be proceeding|won't be moving forward", re.I)),
+        r"regret to inform|not (?:to )?(?:be )?mov(?:e|ing) forward|"
+        r"decided not to (?:proceed|pursue|move forward|continue|progress)|"
+        r"(?:decided|chosen|elected) to (?:pursue|proceed with|move forward with|go with) (?:other|another)|"
+        r"(?:go|proceed|move forward) with (?:other|another|a different) (?:candidate|applicant)|"
+        r"pursue other (?:candidates|applicants)|other candidates (?:whose|who)|"
+        r"position has been filled|no longer (?:under consideration|considering)|"
+        r"not been selected|will not be proceeding|won't be moving forward|"
+        r"not (?:be )?progress(?:ing)? (?:with )?your application|unable to offer you", re.I),
+     True, False),
     ("assessment / OA", re.compile(
         r"online assessment|coding (?:challenge|assessment)|hackerrank|codesignal|codility|"
-        r"take-?home|complete (?:the|your|this) assessment|assessment invitation", re.I)),
+        r"take-?home|complete (?:the|your|this) assessment|assessment invitation", re.I),
+     True, True),
     ("interview / scheduling", re.compile(
         r"schedule (?:a|an|your) (?:call|interview|chat|time)|interview (?:invitation|request|confirmation)|"
-        r"invite you to (?:an )?interview|availability for (?:a|an)|calendly\.com|goodtime\.io", re.I)),
-    ("offer", re.compile(r"pleased to (?:offer|extend)|offer letter", re.I)),
+        r"invite you to (?:an )?interview|availability for (?:a|an)|calendly\.com|goodtime\.io", re.I),
+     True, True),
+    ("offer", re.compile(r"pleased to (?:offer|extend)|offer letter", re.I), True, True),
     ("incomplete application", re.compile(
         r"finish your application|complete your application|you started an application|"
-        r"application (?:is )?incomplete", re.I)),
+        r"application (?:is )?incomplete", re.I),
+     False, False),
 ]
+
+# Words that make a sentence hypothetical: "if", "should", "may", ...
+CONDITIONAL_RE = re.compile(
+    r"\b(?:if|should|whether|unless|in case|in the event|may(?! we| i\b)|might|could(?! you| we)|once)\b", re.I
+)
+_SENTENCE_START_RE = re.compile(r"[.!?\n]")
+
+
+def affirmative_match(rx: re.Pattern, text: str) -> bool:
+    """True if `rx` matches somewhere that isn't inside a conditional sentence."""
+    for m in rx.finditer(text):
+        starts = [x.end() for x in _SENTENCE_START_RE.finditer(text, 0, m.start())]
+        prefix = text[starts[-1] if starts else 0 : m.start()]
+        if not CONDITIONAL_RE.search(prefix):
+            return True
+    return False
+
 
 # Cheap header-only prefilter: is this email worth downloading the body for?
 PREFILTER_SUBJECT_RE = re.compile(
@@ -282,8 +317,11 @@ def classify(email: EmailInput) -> ParseResult:
     _, _, domain = sender_parts(email.sender)
     ats = detect_ats(domain)
 
-    for reason, rx in IGNORE_RULES:
-        if rx.search(text):
+    subject_confirms = bool(CONFIRM_RE.search(subject)) or any(p.match(subject) for p in SUBJECT_PATTERNS)
+    for reason, rx, skip_conditional, subject_only in IGNORE_RULES:
+        scope = subject if (subject_only and subject_confirms) else text
+        hit = affirmative_match(rx, scope) if skip_conditional else bool(rx.search(scope))
+        if hit:
             return ParseResult("ignore", ats=ats, reason=reason)
 
     if not CONFIRM_RE.search(text):
