@@ -326,9 +326,16 @@ textarea {
 }
 
 /* ---------- table ---------- */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
 .search {
   width: min(360px, 100%);
-  margin-bottom: 10px;
 }
 
 table {

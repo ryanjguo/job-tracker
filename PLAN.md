@@ -25,7 +25,7 @@ are landed; 11 (README) is not started.
 | 26 | `fix(parser): stop dropping confirmations that mention next steps` | `parser.py`, tests | done |
 | 27 | `fix(parser): read the role from "Your application to Acme \| Role" subjects` | `parser.py`, tests | done |
 | 28 | `feat(sync): sync automatically on a schedule while the server runs` | `scheduler.py`, `sync.py`, `main.py`, header | done |
-| 29 | `feat(web): search and filter the board` | `frontend/` | to do |
+| 29 | `feat(web): search and filter the board` | `frontend/` | done |
 | 30 | `fix(web): open cards from the keyboard` | `frontend/` | to do |
 | 31 | `feat(sync): suggest status changes from rejection, OA and interview emails` | | needs a decision |
 
