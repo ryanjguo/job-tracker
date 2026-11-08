@@ -191,3 +191,26 @@ def test_polite_questions_are_not_conditional():
     r = classify(mk("Recruiter <jane@acme.com>", "Next steps with Acme",
                     "Thanks for your application! Could you share your availability for a call?"))
     assert (r.kind, r.reason) == ("ignore", "interview / scheduling")
+
+
+@pytest.mark.parametrize("subject", [
+    "Your application to Acme | Software Engineer Intern",
+    "Thank you for applying to Acme - Software Engineer Intern",
+    "Thanks for applying to Acme – Software Engineer Intern!",
+    "Your application with Acme — Software Engineer Intern",
+])
+def test_role_after_a_separator_in_the_subject(subject):
+    r = classify(mk("Acme <no-reply@greenhouse.io>", subject, "Thanks for applying."))
+    assert (r.kind, r.company, r.role) == ("confirmation", "Acme", "Software Engineer Intern"), r
+
+
+def test_confirmation_words_after_a_separator_are_not_a_role():
+    r = classify(mk("Acme <no-reply@greenhouse.io>", "Thank you for applying to Acme - Application received",
+                    "We received your application."))
+    assert (r.kind, r.company, r.role) == ("confirmation", "Acme", ""), r
+
+
+def test_hyphenated_company_names_survive():
+    r = classify(mk("Rolls-Royce <no-reply@greenhouse.io>", "Thank you for applying to Rolls-Royce",
+                    "Thanks for applying."))
+    assert (r.kind, r.company) == ("confirmation", "Rolls-Royce"), r

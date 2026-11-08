@@ -150,6 +150,8 @@ SUBJECT_PATTERNS = [
     re.compile(rf"^thank(?:s| you) for applying (?:for|to) (?:the )?{_ROLE} (?:position |role )?at {_CO}{_END}", re.I),
     re.compile(rf"^your application was sent to {_CO}{_END}", re.I),
     re.compile(rf"^indeed application:\s*{_ROLE}{_END}", re.I),
+    # "Your application to Acme | Software Engineer Intern", "Thanks for applying to Acme - Data Intern"
+    re.compile(rf"^(?:thank(?:s| you) for (?:applying|your application|your interest)(?: to| at| with| in)?|your application (?:to|at|with)) {_CO}\s+[-–—|]\s+{_ROLE}{_END}", re.I),
     re.compile(rf"^thank(?:s| you) for (?:applying|your application|your interest)(?: to| at| with| in)? {_CO}{_END}", re.I),
     re.compile(rf"^your application (?:to|at|with) {_CO}{_END}", re.I),
     re.compile(rf"^{_CO}\s*[-–—|:]\s*(?:application (?:received|confirmation|submitted)|thank(?:s| you) for (?:applying|your application)){_END}", re.I),
@@ -253,6 +255,9 @@ def clean_role(raw: str, company: str = "") -> str:
     if not s or len(s) > 100 or len(s.split()) > 14:
         return ""
     if s.lower() in {"job", "position", "role", "opening", "application"}:
+        return ""
+    # "Thanks for applying to Acme - Application received": the second half isn't a role
+    if CONFIRM_RE.search(s) or re.match(r"(?:application|thank)", s, re.I):
         return ""
     return s
 
