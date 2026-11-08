@@ -26,7 +26,7 @@ are landed; 11 (README) is not started.
 | 27 | `fix(parser): read the role from "Your application to Acme \| Role" subjects` | `parser.py`, tests | done |
 | 28 | `feat(sync): sync automatically on a schedule while the server runs` | `scheduler.py`, `sync.py`, `main.py`, header | done |
 | 29 | `feat(web): search and filter the board` | `frontend/` | done |
-| 30 | `fix(web): open cards from the keyboard` | `frontend/` | to do |
+| 30 | `fix(web): open cards from the keyboard` | `frontend/` | done |
 | 31 | `feat(sync): suggest status changes from rejection, OA and interview emails` | | needs a decision |
 
 Note for 7/8: `main.py` and `schemas.py` hold both; split by route group, or land both in 7 and
