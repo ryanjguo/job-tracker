@@ -1,5 +1,5 @@
 import { followUpDue, type Application, type Status } from '../api'
-import { daysAgo, formatDate, todayISO } from '../format'
+import { daysAgo, formatDate, safeHref, todayISO } from '../format'
 
 interface Props {
   app: Application
@@ -53,8 +53,8 @@ export function AppCard({ app, onStatus, onOpen }: Props) {
         </div>
       )}
       <div className="card__links" onClick={(e) => e.stopPropagation()}>
-        {app.job_url && (
-          <a href={app.job_url} target="_blank" rel="noreferrer">Posting</a>
+        {safeHref(app.job_url) && (
+          <a href={safeHref(app.job_url)} target="_blank" rel="noreferrer">Posting</a>
         )}
         {app.email_url && (
           <a href={app.email_url} target="_blank" rel="noreferrer">Email</a>

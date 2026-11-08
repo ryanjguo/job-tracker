@@ -1,9 +1,19 @@
 from datetime import date, datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .models import Status
+from .urls import normalize_job_url
+
+
+class _JobUrl(BaseModel):
+    """job_url is rendered as a link: only http(s) (bare domains get https:// added)."""
+
+    @field_validator("job_url", check_fields=False)
+    @classmethod
+    def _check_job_url(cls, v):
+        return None if v is None else normalize_job_url(v)
 
 
 class EventOut(BaseModel):
@@ -34,7 +44,7 @@ class ApplicationOut(BaseModel):
     events: list[EventOut]
 
 
-class ApplicationCreate(BaseModel):
+class ApplicationCreate(_JobUrl):
     company: str = Field(min_length=1, max_length=200)
     role: str = Field(default="", max_length=300)
     applied_date: Optional[date] = None
@@ -47,7 +57,7 @@ class ApplicationCreate(BaseModel):
     follow_up_date: Optional[date] = None
 
 
-class ApplicationUpdate(BaseModel):
+class ApplicationUpdate(_JobUrl):
     company: Optional[str] = Field(default=None, min_length=1, max_length=200)
     role: Optional[str] = Field(default=None, max_length=300)
     applied_date: Optional[date] = None
@@ -75,7 +85,7 @@ class EmailRecordOut(BaseModel):
     email_url: Optional[str]
 
 
-class ReviewAccept(BaseModel):
+class ReviewAccept(_JobUrl):
     company: str = Field(min_length=1, max_length=200)
     role: str = Field(default="", max_length=300)
     job_url: str = Field(default="", max_length=1000)

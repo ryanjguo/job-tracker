@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { STATUSES, STATUS_LABEL, followUpDue, type Application, type Status } from '../api'
-import { formatDate, todayISO } from '../format'
+import { formatDate, safeHref, todayISO } from '../format'
 
 type SortKey = 'company' | 'role' | 'location' | 'term' | 'status' | 'applied_date' | 'follow_up_date' | 'ats'
 
@@ -89,7 +89,7 @@ export function TableView({ apps, filtered = false, onStatus, onOpen }: Props) {
               </td>
               <td className="muted">{a.ats || a.source}</td>
               <td className="links">
-                {a.job_url && <a href={a.job_url} target="_blank" rel="noreferrer">Posting</a>}
+                {safeHref(a.job_url) && <a href={safeHref(a.job_url)} target="_blank" rel="noreferrer">Posting</a>}
                 {a.email_url && <a href={a.email_url} target="_blank" rel="noreferrer">Email</a>}
               </td>
             </tr>
