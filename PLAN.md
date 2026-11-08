@@ -28,6 +28,12 @@ and 11 (README) are landed.
 | 29 | `feat(web): search and filter the board` | `frontend/` | done |
 | 30 | `fix(web): open cards from the keyboard` | `frontend/` | done |
 | 31 | `feat(sync): suggest status changes from rejection, OA and interview emails` | | needs a decision |
+| 38 | `fix(parser): stop saving wrong roles and companies from common ATS wording` | `parser.py`, tests | done |
+| 39 | `feat(cli): re-check skipped emails with the current parser rules` | `sync.py`, `mail.py`, `cli.py` | done |
+| 40 | `fix(api): open Gmail links in the account that received the email` | `main.py` | done |
+| 41 | `fix(api): only accept http(s) links for postings` | `urls.py`, schemas, importer, `frontend/` | done |
+| 42 | `fix(api): refuse requests from other websites` | `main.py`, `config.py`, `api.ts` | done |
+| 43 | `feat(api): export applications as CSV` | `exporter.py`, `main.py`, `cli.py`, table view | done |
 
 Note for 7/8: `main.py` and `schemas.py` hold both; split by route group, or land both in 7 and
 keep 8 for the remaining endpoints + tests. Each PR must pass tests on its own.
