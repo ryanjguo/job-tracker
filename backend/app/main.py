@@ -8,7 +8,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select
@@ -21,6 +21,7 @@ from .schemas import (
     ApplicationCreate, ApplicationOut, ApplicationUpdate, EmailRecordOut, MetaOut, ReviewAccept,
     StatsOut, WeekCount,
 )
+from .exporter import applications_csv
 from .scheduler import SyncScheduler
 from .sync import SyncBusy, create_application, last_sync_at, last_sync_error, sync_from_imap
 
@@ -220,6 +221,15 @@ def sync_now(session: Session = Depends(get_session)):
         raise HTTPException(400, str(e))
     except Exception as e:  # login failures etc.
         raise HTTPException(502, f"Sync failed: {e}")
+
+
+@app.get("/api/export.csv")
+def export_csv(session: Session = Depends(get_session)):
+    """Every application as CSV, in columns the importer reads back."""
+    return Response(
+        applications_csv(session), media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="job-applications-{date.today()}.csv"'},
+    )
 
 
 @app.get("/api/stats", response_model=StatsOut)

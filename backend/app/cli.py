@@ -118,6 +118,22 @@ def cmd_seed_demo(_args) -> int:
     return 0
 
 
+def cmd_export(args) -> int:
+    from .exporter import applications_csv
+
+    init_db()
+    with SessionLocal() as s:
+        text = applications_csv(s)
+    with open(args.file, "w", encoding="utf-8", newline="") as f:
+        f.write(text)
+    import csv
+    import io
+
+    n = len(list(csv.reader(io.StringIO(text)))) - 1  # rows, not lines: notes can span lines
+    print(f"Wrote {n} applications to {args.file}")
+    return 0
+
+
 def cmd_import_csv(args) -> int:
     from .importer import import_rows, read_csv
 
@@ -152,6 +168,9 @@ def main(argv=None) -> int:
     rc.add_argument("--dry-run", action="store_true", help="show what would change, save nothing")
     rc.set_defaults(fn=cmd_recheck)
     sub.add_parser("seed-demo", help="add fake data to try the UI").set_defaults(fn=cmd_seed_demo)
+    exp = sub.add_parser("export", help="write every application to a CSV file")
+    exp.add_argument("file", help="where to write, e.g. applications.csv")
+    exp.set_defaults(fn=cmd_export)
     imp = sub.add_parser("import-csv", help="add applications from a spreadsheet saved as CSV")
     imp.add_argument("file", help="path to the .csv file")
     imp.add_argument("--dry-run", action="store_true", help="show what would be added, save nothing")

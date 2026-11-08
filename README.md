@@ -22,7 +22,7 @@ never type in an application after applying; you only move cards when something 
   "possibly ghosted" (still Applied after 30 days).
 - **Automatic syncing** every N minutes while the server runs, with the last failure shown in
   the header.
-- **CSV import** from an existing spreadsheet tracker.
+- **CSV import and export**, from and back to a spreadsheet.
 - **Private.** No LLM and no third-party service: rules run locally, and the data is a SQLite file.
 
 ## Quick start
@@ -124,6 +124,12 @@ python -m app.cli import-csv applications.csv
 It finds the header row even below a title or totals block, maps the usual columns (Company,
 Role / Position, Location, Date Applied, Term, Status, Next Action, Follow-up, Job Link, Notes)
 and keeps any other column as a note line.
+
+## Exporting and backups
+
+"Export all as CSV" in the Table view (or `python -m app.cli export applications.csv`) writes
+every application in the same columns the importer reads, so the file opens in any spreadsheet
+and can be imported again. Copying `backend/tracker.db` also works as a full backup.
 
 ## Development
 
