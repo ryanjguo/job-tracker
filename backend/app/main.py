@@ -19,7 +19,8 @@ from .schemas import (
     ApplicationCreate, ApplicationOut, ApplicationUpdate, EmailRecordOut, MetaOut, ReviewAccept,
     StatsOut, WeekCount,
 )
-from .sync import create_application, last_sync_at, sync_from_imap
+from .scheduler import SyncScheduler
+from .sync import SyncBusy, create_application, last_sync_at, last_sync_error, sync_from_imap
 
 RESPONDED = {Status.oa.value, Status.interview.value, Status.offer.value, Status.rejected.value}
 
@@ -27,7 +28,13 @@ RESPONDED = {Status.oa.value, Status.interview.value, Status.offer.value, Status
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     init_db()
+    scheduler = None
+    if settings.sync_every_minutes > 0 and settings.imap_configured:
+        scheduler = SyncScheduler(every_seconds=settings.sync_every_minutes * 60)
+        scheduler.start()
     yield
+    if scheduler:
+        scheduler.stop()
 
 
 app = FastAPI(title="Job Tracker", lifespan=lifespan)
@@ -179,6 +186,8 @@ def dismiss_email(record_id: int, session: Session = Depends(get_session)):
 def sync_now(session: Session = Depends(get_session)):
     try:
         return sync_from_imap(session).as_dict()
+    except SyncBusy as e:
+        raise HTTPException(409, str(e))
     except RuntimeError as e:
         raise HTTPException(400, str(e))
     except Exception as e:  # login failures etc.
@@ -232,6 +241,8 @@ def meta(session: Session = Depends(get_session)):
         imap_folder=settings.imap_folder, last_sync_at=last_sync_at(session),
         ghost_after_days=settings.ghost_after_days, statuses=[s.value for s in Status],
         review_count=review_count or 0,
+        sync_every_minutes=settings.sync_every_minutes if settings.imap_configured else 0,
+        last_sync_error=last_sync_error(session),
     )
 
 

@@ -32,6 +32,8 @@ class Settings:
     ghost_after_days: int = _int("GHOST_AFTER_DAYS", 30)
     # Two confirmations for the same company+role within this window = duplicate
     duplicate_window_days: int = _int("DUPLICATE_WINDOW_DAYS", 60)
+    # Sync in the background every N minutes while the server runs (0 = only "Sync now" / cron)
+    sync_every_minutes: int = _int("SYNC_EVERY_MINUTES", 0)
 
     @property
     def imap_configured(self) -> bool:

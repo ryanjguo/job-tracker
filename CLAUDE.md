@@ -26,7 +26,9 @@ backend/
                 EmailRecord (every email looked at), Meta
     parser.py   classify(email) -> confirmation | review | ignore, + company/role extraction
     mail.py     IMAP source: headers first, bodies only for prefilter candidates, BODY.PEEK
-    sync.py     mailbox -> prefilter -> classify -> dedupe -> DB; per-email commits
+    sync.py     mailbox -> prefilter -> classify -> dedupe -> DB; per-email commits; remembers
+                the last sync error
+    scheduler.py background thread that syncs every SYNC_EVERY_MINUTES while the server runs
     main.py     FastAPI routes under /api; serves frontend/dist at / if built
     importer.py CSV import: finds the header row, maps columns, extra columns go to notes
     cli.py      python -m app.cli sync | test-imap | seed-demo | import-csv

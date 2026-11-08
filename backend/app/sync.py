@@ -15,6 +15,11 @@ from .parser import EmailInput, classify, is_prefilter_candidate, normalize_comp
 
 _lock = threading.Lock()
 LAST_SYNC_KEY = "last_sync_at"
+LAST_ERROR_KEY = "last_sync_error"
+
+
+class SyncBusy(RuntimeError):
+    """Another sync is running; not an error worth reporting."""
 
 
 @dataclass
@@ -175,14 +180,32 @@ def run_sync(session: Session, source: MailSource, cfg: Settings = default_setti
     return summary
 
 
+def last_sync_error(session: Session) -> str | None:
+    return get_meta(session, LAST_ERROR_KEY) or None
+
+
+def _record_error(session: Session, message: str) -> None:
+    session.rollback()
+    set_meta(session, LAST_ERROR_KEY, message[:500])
+    session.commit()
+
+
 def sync_from_imap(session: Session, cfg: Settings = default_settings) -> SyncSummary:
+    """One IMAP sync. Failures are remembered (see last_sync_error) and re-raised; a success
+    clears the remembered error."""
     if not cfg.imap_configured:
         raise RuntimeError("IMAP is not configured. Set IMAP_USER and IMAP_PASSWORD in backend/.env")
     if not _lock.acquire(blocking=False):
-        raise RuntimeError("A sync is already running")
+        raise SyncBusy("A sync is already running")
     try:
         with ImapSource(cfg.imap_host, cfg.imap_port, cfg.imap_user, cfg.imap_password,
                         cfg.imap_folder) as src:
-            return run_sync(session, src, cfg)
+            summary = run_sync(session, src, cfg)
+        set_meta(session, LAST_ERROR_KEY, "")
+        session.commit()
+        return summary
+    except Exception as e:
+        _record_error(session, str(e) or e.__class__.__name__)
+        raise
     finally:
         _lock.release()
