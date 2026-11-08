@@ -214,3 +214,61 @@ def test_hyphenated_company_names_survive():
     r = classify(mk("Rolls-Royce <no-reply@greenhouse.io>", "Thank you for applying to Rolls-Royce",
                     "Thanks for applying."))
     assert (r.kind, r.company) == ("confirmation", "Rolls-Royce"), r
+
+
+# Wrong data is worse than missing data (#38): each of these used to be saved incorrectly.
+WRONG_DATA_CASES = [
+    ("Acme Careers <acme@myworkday.com>", "Thank you for applying!",
+     "Thank you for applying for the position of Software Engineer Intern at Acme. We will review "
+     "your qualifications.", "Acme", "Software Engineer Intern"),
+    ("Acme <noreply@icims.com>", "Thank you for your interest in Acme",
+     "Thank you for your interest in the role of Data Analyst Co-op. Your application has been received.",
+     "Acme", "Data Analyst Co-op"),
+    ("Acme <no-reply@ashbyhq.com>", "Your Acme application",
+     "Thanks for applying to the Platform Engineer role.", "Acme", "Platform Engineer"),
+    ("Acme Hiring <no-reply@greenhouse-mail.io>", "Thank you for applying to Acme!",
+     "Thank you for your interest in Acme! We wanted to let you know we received your application for "
+     "Software Engineer, New Grad - 2027, and we are delighted that you would consider joining our team.",
+     "Acme", "Software Engineer, New Grad - 2027"),
+    ("SAP SuccessFactors <noreply@successfactors.com>", "Acme: Application Received",
+     "We have received your application for Requisition 12345 - Software Engineer.",
+     "Acme", "Software Engineer"),
+    ("Workday <acme@myworkday.com>", "Application Received",
+     "Thank you for submitting your application for the role of Product Manager Intern, Summer 2027 "
+     "(R-12345). We will be in touch.", "Acme", "Product Manager Intern, Summer 2027"),
+    ("Acme Talent <talent@smartrecruiters.com>", "Your application for Software Developer has been received",
+     "Thanks for applying to Acme.", "Acme", "Software Developer"),
+    ("Acme <no-reply@greenhouse.io>", "We've received your application to Acme",
+     "Hi Ryan, thanks for applying.", "Acme", ""),
+]
+
+
+@pytest.mark.parametrize("sender,subject,body,company,role", WRONG_DATA_CASES)
+def test_extracts_the_right_company_and_role(sender, subject, body, company, role):
+    r = classify(mk(sender, subject, body))
+    assert (r.kind, r.company, r.role) == ("confirmation", company, role), r
+
+
+def test_subject_company_beats_sender_for_received_to():
+    r = classify(mk("Recruiting <no-reply@greenhouse.io>", "We've received your application to Acme",
+                    "Thanks for applying."))
+    assert (r.company, r.reason) == ("Acme", "subject match")
+
+
+@pytest.mark.parametrize("raw,expected", [
+    ("Software Engineer (R-12345)", "Software Engineer"),
+    ("Software Engineer - JR123456", "Software Engineer"),
+    ("Req #4521 - Data Analyst", "Data Analyst"),
+    ("Software Engineer Intern (2027)", "Software Engineer Intern (2027)"),
+    ("Intern - Fall2027", "Intern - Fall2027"),
+    ("the", ""),
+])
+def test_clean_role(raw, expected):
+    from app.parser import clean_role
+    assert clean_role(raw) == expected
+
+
+def test_confirmation_of_application_subject_gives_the_role():
+    r = classify(mk("Acme Recruiting <recruiting@acme.com>", "Confirmation of your application - QA Engineer",
+                    "Thank you for applying. Our team will review your application."))
+    assert r.role == "QA Engineer"
